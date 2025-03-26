@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -33,14 +34,52 @@ import {
 
 const LandingPage = () => {
   const [isHoveringNew, setIsHoveringNew] = useState(false);
+  const router = useRouter();
   const [isHoveringPrevious, setIsHoveringPrevious] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [sessionFormData, setSessionFormData] = useState({
     title: "",
     subject: "",
     description: "",
-    goalTime: "30",
   });
+
+  const handleCreateSession = async () => {
+    // Reset error state
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    try {
+      console.log("Creating study session with data:", sessionFormData);
+      const response = await fetch("/api/study_session/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(sessionFormData),
+      });
+
+      const data = await response.json();
+
+      console.log("Create session response:", data);
+
+      if (data.success) {
+        // Redirect to materials upload page with the session id
+        router.push(`/upload_materials/${data.data.id}`);
+      } else {
+        // Show error message
+        setErrorMessage(
+          data.error || "Failed to create study session. Please try again."
+        );
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      console.error("Error creating study session:", error);
+      setErrorMessage("An unexpected error occurred. Please try again.");
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-purple-50 relative overflow-hidden">
@@ -312,6 +351,7 @@ const LandingPage = () => {
       </div>
 
       {/* Create New Session Modal */}
+      {/* Create New Session Modal */}
       <AlertDialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <AlertDialogContent className="bg-white max-w-xl rounded-2xl border-0 shadow-xl p-0 overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 flex justify-between items-center">
@@ -328,6 +368,7 @@ const LandingPage = () => {
               size="icon"
               onClick={() => setIsCreateModalOpen(false)}
               className="text-white hover:bg-white/20 rounded-full h-8 w-8"
+              disabled={isSubmitting}
             >
               <X className="h-5 w-5" />
             </Button>
@@ -350,6 +391,7 @@ const LandingPage = () => {
                       title: e.target.value,
                     })
                   }
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -362,6 +404,7 @@ const LandingPage = () => {
                   onValueChange={(value) =>
                     setSessionFormData({ ...sessionFormData, subject: value })
                   }
+                  disabled={isSubmitting}
                 >
                   <SelectTrigger
                     id="session-subject"
@@ -399,47 +442,59 @@ const LandingPage = () => {
                       description: e.target.value,
                     })
                   }
+                  disabled={isSubmitting}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="session-goal-time" className="text-gray-700">
-                  Goal Time (minutes)
-                </Label>
-                <Select
-                  value={sessionFormData.goalTime}
-                  onValueChange={(value) =>
-                    setSessionFormData({ ...sessionFormData, goalTime: value })
-                  }
-                >
-                  <SelectTrigger
-                    id="session-goal-time"
-                    className="border-2 border-gray-200 focus:border-indigo-300"
-                  >
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">1 hour</SelectItem>
-                    <SelectItem value="90">1.5 hours</SelectItem>
-                    <SelectItem value="120">2 hours</SelectItem>
-                    <SelectItem value="180">3 hours</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Display error message if there is one */}
+              {errorMessage && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md border border-red-200 text-sm">
+                  {errorMessage}
+                </div>
+              )}
             </div>
           </div>
 
           <AlertDialogFooter className="p-6 pt-0">
-            <AlertDialogCancel className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-200">
+            <AlertDialogCancel
+              className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-200"
+              disabled={isSubmitting}
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 font-semibold px-6">
-              Start Adding Materials
-            </AlertDialogAction>
+            <Button
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 font-semibold px-6 min-w-[180px]"
+              onClick={handleCreateSession}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Processing...
+                </div>
+              ) : (
+                "Start Adding Materials"
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
