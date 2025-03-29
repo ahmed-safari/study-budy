@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { useParams } from "next/navigation";
 import {
   File,
   X,
@@ -18,6 +19,61 @@ import {
   Image,
   Clock,
 } from "lucide-react";
+import { upload } from "@vercel/blob/client";
+
+// Upload a PDF file using Vercel Blob – note that this returns a blob object containing an "id" for polling.
+async function uploadPdfFile(file, setProcessingStatus) {
+  // get the sessionId from the URL
+  const sessionId = useParams().sessionId;
+  // Here we set an initial temporary status using a temp ID.
+  const tempMaterialId = Math.random().toString(36).substring(7);
+  setProcessingStatus((prev) => ({
+    ...prev,
+    [tempMaterialId]: { progress: 0, statusText: "Uploading" },
+  }));
+
+  const blob = await upload(file.name, file, {
+    access: "public",
+    handleUploadUrl: "/api/materials/upload?sessionId=" + sessionId,
+  });
+
+  // Use the blob.id if provided; otherwise, fall back to our tempMaterialId.
+  const materialId = blob.id || tempMaterialId;
+  // Start polling the material status after upload is complete.
+  pollMaterialStatus(materialId, setProcessingStatus);
+  return materialId;
+}
+
+// Poll the material status every 3 seconds by calling /materials/[materialId]/.
+function pollMaterialStatus(materialId, setProcessingStatus) {
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch(`/materials/${materialId}/`);
+      const data = await res.json();
+      // Map returned statuses to a progress value (adjust as needed).
+      const statusMap = {
+        "Converting to text": 25,
+        "Skimming Through": 50,
+        Summarizing: 75,
+        Ready: 100,
+      };
+      const progress = statusMap[data.material_status] || 0;
+      setProcessingStatus((prev) => ({
+        ...prev,
+        [materialId]: {
+          ...prev[materialId],
+          progress,
+          statusText: data.material_status,
+        },
+      }));
+      if (data.material_status === "Ready") {
+        clearInterval(interval);
+      }
+    } catch (err) {
+      console.error("Error polling material status:", err);
+    }
+  }, 3000);
+}
 
 // import { fetchYouTubeMetadata } from "@/utils/youtube";
 
@@ -456,6 +512,7 @@ const UploadMaterialsPage = () => {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
+    // For each file, simply store it in state along with an "uploaded" flag.
     const newFiles = selectedFiles.map((file) => ({
       id: Math.random().toString(36).substring(7),
       file,
@@ -465,6 +522,7 @@ const UploadMaterialsPage = () => {
       title: file.name,
       subject: "",
       color: getRandomBubbleColor(),
+      uploaded: false, // not uploaded yet
     }));
     setFiles((prev) => [...prev, ...newFiles]);
   };
@@ -524,22 +582,48 @@ const UploadMaterialsPage = () => {
   const handleRemoveLink = (id) =>
     setLinks((prev) => prev.filter((link) => link.id !== id));
 
-  // Simulated ingestion processing for demonstration
-  const handleIngest = () => {
+  const handleIngest = async () => {
     setIsUploading(true);
+    // Initialize processingStatus for each file (and links if needed)
     const initialStatus = {};
     files.forEach((file) => {
-      initialStatus[file.id] = { phase: 0, progress: 0, type: "file" };
-    });
-    links.forEach((link) => {
-      initialStatus[link.id] = { phase: 0, progress: 0, type: "link" };
+      initialStatus[file.id] = {
+        phase: 0,
+        progress: 0,
+        type: "file",
+        statusText: "",
+      };
     });
     setProcessingStatus(initialStatus);
 
-    const allItems = [...files, ...links];
-    allItems.forEach((item) => {
-      simulateProcessing(item.id, !!item.file);
-    });
+    // For each PDF file that hasn't been uploaded, perform the Vercel Blob upload
+    for (const fileObj of files) {
+      if (fileObj.type === "application/pdf" && !fileObj.uploaded) {
+        try {
+          const materialId = await uploadPdfFile(
+            fileObj.file,
+            setProcessingStatus
+          );
+          // Update the file object in state with the new materialId and mark it as uploaded.
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileObj.id ? { ...f, id: materialId, uploaded: true } : f
+            )
+          );
+        } catch (error) {
+          console.error("Error during file upload:", error);
+        }
+      }
+    }
+
+    // // For non-PDF files or after uploading PDFs, you can simulate processing as before:
+    // const allItems = [...files];
+    // allItems.forEach((item) => {
+    //   simulateProcessing(
+    //     item.id,
+    //     item.type === "application/pdf" ? true : false
+    //   );
+    // });
   };
 
   const simulateProcessing = (id, isFile) => {
