@@ -1,7 +1,8 @@
 // utils/youtube.js
 import fs from "fs";
 import path from "path";
-import ytdl from "ytdl-core";
+// import ytdl from "ytdl-core";
+const ytdl = require("@distube/ytdl-core");
 
 /**
  * Fetches YouTube video metadata using ytdl-core.
