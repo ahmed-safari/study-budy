@@ -62,7 +62,13 @@ export async function POST(request) {
             console.error(`Error processing material ${material.id}:`, error);
           });
 
-          return { success: true, materialId: material.id };
+          // Include the materialId in the response explicitly
+          return {
+            success: true,
+            materialId: material.id,
+            url: url, // Return the URL too for reference
+            message: "Material created and processing started",
+          };
         } catch (dbError) {
           console.error("Failed to save material to database:", dbError);
           return { success: false, error: dbError.message };
@@ -70,8 +76,14 @@ export async function POST(request) {
       },
     });
 
-    console.log("Upload requested successfully: ", jsonResponse);
-    return NextResponse.json(jsonResponse);
+    // Add additional information to the response if needed
+    const finalResponse = {
+      ...jsonResponse,
+      message: "Upload processed successfully",
+    };
+
+    console.log("Upload requested successfully: ", finalResponse);
+    return NextResponse.json(finalResponse);
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: error.message }, { status: 400 });

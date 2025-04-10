@@ -66,9 +66,64 @@ async function uploadPdfFile(file, setProcessingStatus, sessionId) {
       },
     }));
 
-    // The material ID should come from the blob response
-    let materialId = blob.id || tempMaterialId;
-    console.log("Upload complete, material ID:", materialId, "blob:", blob);
+    console.log("Upload complete, blob response:", blob);
+
+    // The materialId might not be immediately available in the blob response
+    // We need to make a separate request to get the material ID from the server
+    if (!blob.materialId) {
+      // We'll use the URL to identify the material later
+      const blobUrl = blob.url;
+      const fileName = blob.pathname || blobUrl.split("/").pop();
+
+      // Wait briefly to allow the server to finish processing and creating the DB record
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Make a request to get the material ID for this file
+      try {
+        const getMaterialRes = await fetch(
+          `/api/materials/create?fileName=${encodeURIComponent(
+            fileName
+          )}&sessionId=${sessionId}`
+        );
+        if (!getMaterialRes.ok) {
+          throw new Error(
+            `Failed to get material ID: ${getMaterialRes.status}`
+          );
+        }
+
+        const materialData = await getMaterialRes.json();
+        if (materialData.success && materialData.materialId) {
+          blob.materialId = materialData.materialId;
+          console.log("Retrieved material ID:", materialData.materialId);
+        } else {
+          throw new Error("Material ID not returned from server");
+        }
+      } catch (idError) {
+        console.error("Error getting material ID:", idError);
+        throw new Error(`Failed to get material ID: ${idError.message}`);
+      }
+    }
+
+    const materialId = blob.materialId;
+    console.log("Final material ID for polling:", materialId);
+
+    if (!materialId) {
+      throw new Error(
+        "Failed to get material ID from server response. Make sure the server is returning a materialId property in the response."
+      );
+    }
+
+    // Update the processing status with the new permanent ID
+    if (materialId !== tempMaterialId) {
+      setProcessingStatus((prev) => {
+        const newStatus = { ...prev };
+        // Copy the status from the temp ID to the permanent ID
+        newStatus[materialId] = { ...newStatus[tempMaterialId] };
+        // Remove the temporary ID entry
+        delete newStatus[tempMaterialId];
+        return newStatus;
+      });
+    }
 
     // Start polling the material status after upload is complete
     pollMaterialStatus(materialId, setProcessingStatus);
@@ -94,6 +149,8 @@ function pollMaterialStatus(materialId, setProcessingStatus) {
   let attempts = 0;
   const maxAttempts = 20; // Maximum number of polling attempts (60 seconds total)
 
+  console.log(`Starting polling for material ID: ${materialId}`);
+
   const interval = setInterval(async () => {
     try {
       attempts++;
@@ -111,12 +168,44 @@ function pollMaterialStatus(materialId, setProcessingStatus) {
         return;
       }
 
-      const res = await fetch(`/api/materials/${materialId}`);
+      console.log(`Polling attempt ${attempts} for material ID: ${materialId}`);
+      const apiUrl = `/api/materials/${materialId}`;
+      console.log(`Calling API: ${apiUrl}`);
+
+      const res = await fetch(apiUrl);
+
       if (!res.ok) {
+        const errorText = await res
+          .text()
+          .catch(() => "Failed to get error details");
+        console.error(`API Error (${res.status}): ${errorText}`);
+
+        // Handle 404 specifically - likely means the material wasn't created properly
+        if (res.status === 404) {
+          setProcessingStatus((prev) => ({
+            ...prev,
+            [materialId]: {
+              ...prev[materialId],
+              statusText: "Material Not Found",
+              error:
+                "The uploaded material could not be found. There may be an issue with the server configuration.",
+              phase: -1,
+            },
+          }));
+
+          // Stop polling if we get a 404 after a few attempts
+          if (attempts >= 3) {
+            console.error("Stopping polling due to repeated 404 errors");
+            clearInterval(interval);
+            return;
+          }
+        }
+
         throw new Error(`API responded with status: ${res.status}`);
       }
 
       const data = await res.json();
+      console.log(`Poll response for ${materialId}:`, data);
 
       if (!data.success) {
         throw new Error(data.error || "Unknown error checking material status");
@@ -150,7 +239,7 @@ function pollMaterialStatus(materialId, setProcessingStatus) {
         clearInterval(interval);
       }
     } catch (err) {
-      console.error("Error polling material status:", err);
+      console.error(`Error polling material status for ${materialId}:`, err);
       // Don't clear the interval on error, just log it and continue trying
       setProcessingStatus((prev) => ({
         ...prev,

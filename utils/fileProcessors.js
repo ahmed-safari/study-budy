@@ -48,10 +48,23 @@ class FileProcessor {
    * Update process status
    */
   async updateStatus(materialId, status, prisma) {
-    return prisma.material.update({
-      where: { id: materialId },
-      data: { status },
-    });
+    // Log status update for debugging
+    console.log(`Updating material ${materialId} status to: ${status}`);
+
+    try {
+      const result = await prisma.material.update({
+        where: { id: materialId },
+        data: { status },
+      });
+      console.log(`Status updated successfully for ${materialId}`);
+      return result;
+    } catch (error) {
+      console.error(
+        `Failed to update status for material ${materialId}:`,
+        error
+      );
+      throw error;
+    }
   }
 }
 
@@ -61,6 +74,11 @@ class FileProcessor {
 class PdfProcessor extends FileProcessor {
   async process(fileUrl, { materialId, prisma, updateProgress }) {
     try {
+      // Log processing start for tracking
+      console.log(
+        `Starting processing for material ID: ${materialId}, URL: ${fileUrl}`
+      );
+
       // Update status to processing
       await this.updateStatus(materialId, "processing", prisma);
 
@@ -68,12 +86,21 @@ class PdfProcessor extends FileProcessor {
 
       // Download the PDF
       const pdfBuffer = await this.downloadFile(fileUrl);
+      console.log(
+        `PDF downloaded successfully for ${materialId}, size: ${pdfBuffer.length} bytes`
+      );
 
       if (updateProgress)
         updateProgress(40, "Sending PDF to OpenAI for text extraction...");
 
+      // Update status to reflect the current step
+      await this.updateStatus(materialId, "Converting to text", prisma);
+
       // Use OpenAI to extract text from the PDF
       const extractedText = await this.extractTextWithOpenAI(pdfBuffer);
+      console.log(
+        `Text extracted successfully for ${materialId}, length: ${extractedText.length} chars`
+      );
 
       if (updateProgress) updateProgress(80, "Storing extracted text...");
 
@@ -82,9 +109,10 @@ class PdfProcessor extends FileProcessor {
         where: { id: materialId },
         data: {
           rawContent: extractedText,
-          status: "completed",
+          status: "Ready", // Use consistent status naming
         },
       });
+      console.log(`Processing completed for ${materialId}`);
 
       if (updateProgress) updateProgress(100, "Processing complete");
 
@@ -93,10 +121,17 @@ class PdfProcessor extends FileProcessor {
         text: extractedText,
       };
     } catch (error) {
-      console.error("PDF processing error:", error);
+      console.error(`PDF processing error for ${materialId}:`, error);
 
       // Update status to error
-      await this.updateStatus(materialId, "error", prisma);
+      try {
+        await this.updateStatus(materialId, "error", prisma);
+      } catch (statusError) {
+        console.error(
+          `Failed to update error status for ${materialId}:`,
+          statusError
+        );
+      }
 
       if (updateProgress) updateProgress(100, "Error processing file");
 
@@ -123,14 +158,15 @@ class PdfProcessor extends FileProcessor {
             role: "user",
             content: [
               {
-                type: "text",
-                text: "Please extract all the text content from this PDF document, preserving the formatting as much as possible. Include all text, tables, and relevant content.",
+                type: "file",
+                file: {
+                  file_data: `data:application/pdf;base64,${base64Pdf}`,
+                  filename: "document.pdf",
+                },
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:application/pdf;base64,${base64Pdf}`,
-                },
+                type: "text",
+                text: "Please extract all the text content from this PDF document, preserving the formatting as much as possible. Include all text, tables, and relevant content.",
               },
             ],
           },
@@ -170,6 +206,9 @@ class DefaultProcessor extends FileProcessor {
  * @returns {Promise<Object>} - Processing result
  */
 export async function processFile(fileUrl, fileType, options = {}) {
+  console.log(
+    `Processing file of type ${fileType}, materialId: ${options.materialId}`
+  );
   const processor = getFileProcessor(fileType);
   return processor.process(fileUrl, options);
 }
