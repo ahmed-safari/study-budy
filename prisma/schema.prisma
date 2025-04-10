@@ -35,6 +35,33 @@ model Material {
   status      String
   studySessionId String
   studySession   StudySession @relation(fields: [studySessionId], references: [id])
+  quizzes       Quiz[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Quiz {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  difficulty  String      // easy, medium, hard
+  timeLimit   Int?        // time limit in minutes, null for no limit
+  materialId  String
+  material    Material    @relation(fields: [materialId], references: [id])
+  questions   Question[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Question {
+  id          String      @id @default(cuid())
+  text        String
+  type        String      // multiple-choice, multi-select, true-false, short-answer
+  options     Json?       // Array of option objects: [{id: string, text: string}]
+  correctAnswer Json      // String for single answer, String[] for multi-select
+  explanation String?
+  quizId      String
+  quiz        Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }

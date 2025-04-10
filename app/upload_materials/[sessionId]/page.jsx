@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 import { useParams, useRouter } from "next/navigation";
 import {
   File,
@@ -617,6 +618,7 @@ const MaterialActions = ({ material, sessionId }) => {
     questionType: "multiple-choice",
   });
   const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
+  const router = useRouter();
 
   // Array of possible actions for a material
   const actions = [
@@ -671,15 +673,24 @@ const MaterialActions = ({ material, sessionId }) => {
   ];
 
   const handleCreateQuiz = async () => {
+    // Set loading state to show the user something is happening
     setIsCreatingQuiz(true);
-    // Simulating quiz generation - in a real app this would call an API
-    setTimeout(() => {
+
+    try {
+      // Here you would make an API call to create the quiz with the selected parameters
+      // For now, we'll just simulate a delay and then redirect
+
+      // Navigate to the quiz creation page after a brief delay to show the loading state
+      router.push(`/quiz/${material.id}/create`);
+
+      // Note: The modal will be unmounted when we navigate,
+      // so we don't need to explicitly close it
+    } catch (error) {
+      console.error("Error creating quiz:", error);
+      // Reset loading state if there's an error
       setIsCreatingQuiz(false);
-      setShowCreateQuizModal(false);
-      alert(
-        `Quiz created with ${quizParams.numQuestions} ${quizParams.questionType} questions at ${quizParams.difficulty} difficulty!`
-      );
-    }, 2000);
+      // Optionally show an error message
+    }
   };
 
   return (

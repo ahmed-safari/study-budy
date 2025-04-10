@@ -39,12 +39,15 @@ import {
   CheckCircle,
   Edit,
   Loader,
+  ListChecks,
 } from "lucide-react";
 
 const MaterialDetailsPage = () => {
   const [material, setMaterial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [quizzes, setQuizzes] = useState([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(false);
   const params = useParams();
   const router = useRouter();
   const materialId = params.materialId;
@@ -139,13 +142,13 @@ const MaterialDetailsPage = () => {
 
   const actionCards = [
     {
-      title: "Create Quiz",
+      title: "Quizzes",
       description:
-        "Generate a custom quiz based on this material to test your knowledge",
+        "View and create quizzes based on this material to test your knowledge",
       icon: <Brain className="h-8 w-8 text-white" />,
       color: "from-purple-500 to-indigo-600",
       disabled: material?.status !== "Ready" && material?.status !== "ready",
-      path: `/quiz/${materialId}/create`,
+      path: `/quiz/${materialId}/list`,
     },
     {
       title: "Create Study Plan",
@@ -406,45 +409,47 @@ const MaterialDetailsPage = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {actionCards.map((action, index) => (
-            <Card
+            <div
               key={index}
-              className={`relative overflow-hidden transition-all group hover:shadow-lg hover:scale-[1.02] ${
-                action.disabled ? "opacity-60" : ""
+              className={`cursor-pointer ${
+                action.disabled ? "" : "hover:scale-[1.02]"
               }`}
+              onClick={() => !action.disabled && router.push(action.path)}
             >
-              <div
-                className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-5 transition-opacity`}
-              />
-              <CardContent className="p-6 flex flex-col h-full">
+              <Card
+                className={`relative overflow-hidden transition-all group hover:shadow-lg ${
+                  action.disabled ? "opacity-60" : ""
+                }`}
+              >
                 <div
-                  className={`p-4 rounded-full bg-gradient-to-br ${action.color} self-start mb-4`}
-                >
-                  {action.icon}
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  {action.title}
-                </h3>
-                <p className="text-gray-600 mb-6 flex-grow">
-                  {action.description}
-                </p>
-                {action.disabled ? (
-                  <Button
-                    disabled
-                    className="w-full opacity-50 cursor-not-allowed"
+                  className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-5 transition-opacity`}
+                />
+                <CardContent className="p-6 flex flex-col h-full">
+                  <div
+                    className={`p-4 rounded-full bg-gradient-to-br ${action.color} self-start mb-4`}
                   >
-                    Processing Required
-                  </Button>
-                ) : (
-                  <Link href={action.path} passHref>
-                    <Button
-                      className={`w-full bg-gradient-to-r ${action.color} text-white hover:shadow-md`}
+                    {action.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {action.title}
+                  </h3>
+                  <p className="text-gray-600 mb-6 flex-grow">
+                    {action.description}
+                  </p>
+                  {action.disabled ? (
+                    <div className="w-full py-2 px-4 text-center bg-gray-200 opacity-50 rounded-md text-gray-700">
+                      Processing Required
+                    </div>
+                  ) : (
+                    <div
+                      className={`w-full py-2 px-4 text-center bg-gradient-to-r ${action.color} text-white rounded-md hover:shadow-md`}
                     >
                       {action.title}
-                    </Button>
-                  </Link>
-                )}
-              </CardContent>
-            </Card>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           ))}
         </div>
 
