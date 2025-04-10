@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { useParams } from "next/navigation";
 import {
   File,
@@ -22,60 +23,149 @@ import {
 import { upload } from "@vercel/blob/client";
 
 // Upload a PDF file using Vercel Blob – note that this returns a blob object containing an "id" for polling.
-async function uploadPdfFile(file, setProcessingStatus) {
-  // get the sessionId from the URL
-  const sessionId = useParams().sessionId;
-  // Here we set an initial temporary status using a temp ID.
+async function uploadPdfFile(file, setProcessingStatus, sessionId) {
+  // Here we set an initial temporary status
   const tempMaterialId = Math.random().toString(36).substring(7);
   setProcessingStatus((prev) => ({
     ...prev,
-    [tempMaterialId]: { progress: 0, statusText: "Uploading" },
+    [tempMaterialId]: {
+      progress: 0,
+      statusText: "Uploading",
+      phase: 0,
+      error: null,
+    },
   }));
 
-  const blob = await upload(file.name, file, {
-    access: "public",
-    handleUploadUrl: "/api/materials/upload?sessionId=" + sessionId,
-  });
+  try {
+    // Upload the file to Vercel Blob
+    const blob = await upload(file.name, file, {
+      access: "public",
+      handleUploadUrl: `/api/materials/upload?sessionId=${sessionId}`,
+      onUploadProgress: (progress) => {
+        // Update progress during upload
+        setProcessingStatus((prev) => ({
+          ...prev,
+          [tempMaterialId]: {
+            ...prev[tempMaterialId],
+            progress: Math.round(progress * 50), // Scale to 0-50% for upload phase
+            statusText: "Uploading",
+            phase: 0,
+          },
+        }));
+      },
+    });
 
-  // Use the blob.id if provided; otherwise, fall back to our tempMaterialId.
-  const materialId = blob.id || tempMaterialId;
-  // Start polling the material status after upload is complete.
-  pollMaterialStatus(materialId, setProcessingStatus);
-  return materialId;
+    // Update status after successful upload
+    setProcessingStatus((prev) => ({
+      ...prev,
+      [tempMaterialId]: {
+        ...prev[tempMaterialId],
+        progress: 50,
+        statusText: "Processing",
+        phase: 1,
+      },
+    }));
+
+    // The material ID should come from the blob response
+    let materialId = blob.id || tempMaterialId;
+    console.log("Upload complete, material ID:", materialId, "blob:", blob);
+
+    // Start polling the material status after upload is complete
+    pollMaterialStatus(materialId, setProcessingStatus);
+    return materialId;
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    // Update status on error
+    setProcessingStatus((prev) => ({
+      ...prev,
+      [tempMaterialId]: {
+        ...prev[tempMaterialId],
+        statusText: "Upload Failed",
+        error: error.message || "File upload failed",
+        phase: -1,
+      },
+    }));
+    return null;
+  }
 }
 
-// Poll the material status every 3 seconds by calling /materials/[materialId]/.
+// Poll the material status every 3 seconds by calling /api/materials/[materialId]
 function pollMaterialStatus(materialId, setProcessingStatus) {
+  let attempts = 0;
+  const maxAttempts = 20; // Maximum number of polling attempts (60 seconds total)
+
   const interval = setInterval(async () => {
     try {
-      const res = await fetch(`/materials/${materialId}/`);
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(interval);
+        setProcessingStatus((prev) => ({
+          ...prev,
+          [materialId]: {
+            ...prev[materialId],
+            statusText: "Processing Timed Out",
+            error: "Processing took too long. Check your material later.",
+            phase: -1,
+          },
+        }));
+        return;
+      }
+
+      const res = await fetch(`/api/materials/${materialId}`);
+      if (!res.ok) {
+        throw new Error(`API responded with status: ${res.status}`);
+      }
+
       const data = await res.json();
-      // Map returned statuses to a progress value (adjust as needed).
+
+      if (!data.success) {
+        throw new Error(data.error || "Unknown error checking material status");
+      }
+
+      // Map returned statuses to a progress value
       const statusMap = {
-        "Converting to text": 25,
-        "Skimming Through": 50,
-        Summarizing: 75,
+        "Not Found": 50,
+        Processing: 75,
+        "Converting to text": 80,
+        "Skimming Through": 85,
+        Summarizing: 95,
         Ready: 100,
       };
-      const progress = statusMap[data.material_status] || 0;
+
+      const progress = statusMap[data.material_status] || 50;
+      const phase = progress === 100 ? 4 : Math.floor(progress / 25);
+
       setProcessingStatus((prev) => ({
         ...prev,
         [materialId]: {
           ...prev[materialId],
           progress,
           statusText: data.material_status,
+          phase,
+          error: null,
         },
       }));
+
       if (data.material_status === "Ready") {
         clearInterval(interval);
       }
     } catch (err) {
       console.error("Error polling material status:", err);
+      // Don't clear the interval on error, just log it and continue trying
+      setProcessingStatus((prev) => ({
+        ...prev,
+        [materialId]: {
+          ...prev[materialId],
+          statusText: "Checking Status...",
+          error: null, // Don't show errors to user during polling, just keep trying
+        },
+      }));
     }
   }, 3000);
-}
 
-// import { fetchYouTubeMetadata } from "@/utils/youtube";
+  // Return a cleanup function that clears the interval
+  return () => clearInterval(interval);
+}
 
 // ---------------------
 // Header Component
@@ -205,66 +295,76 @@ const FilePreview = ({
   processingStatus,
   processingPhases,
   formatFileSize,
-  getProgressGradient,
   handleRemoveFile,
   getFileIcon,
-}) => (
-  <div
-    className="p-4 border rounded transition hover:shadow-md"
-    style={{ borderColor: file.color }}
-  >
-    <div className="flex items-start">
-      <div className="mr-4">
-        <div
-          className="p-2 rounded-full"
-          style={{ backgroundColor: `${file.color}20` }}
-        >
-          {getFileIcon(file.type)}
-        </div>
-      </div>
-      <div className="flex-1">
-        <div className="flex justify-between mb-2">
-          <span className="font-medium text-gray-800">{file.title}</span>
-          <Badge variant="outline" className="text-xs">
-            {file.subject || "No subject"}
-          </Badge>
-        </div>
-        {isUploading ? (
-          <>
-            <p className="text-sm text-gray-600">
-              {processingPhases.file[processingStatus[file.id]?.phase || 0]}
-            </p>
-            <div className="h-2 rounded-full overflow-hidden bg-gray-200 mt-1">
-              <div
-                className="h-full transition-all duration-300"
-                style={{
-                  width: `${processingStatus[file.id]?.progress || 0}%`,
-                  background: getProgressGradient(
-                    processingStatus[file.id]?.progress || 0
-                  ),
-                }}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-gray-600">{formatFileSize(file.size)}</p>
-          </>
-        )}
-        <div className="flex justify-end mt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRemoveFile(file.id)}
-            className="p-1"
+}) => {
+  const status = processingStatus[file.id] || {
+    progress: 0,
+    phase: 0,
+    error: null,
+  };
+
+  return (
+    <div
+      className="p-4 border rounded transition hover:shadow-md"
+      style={{ borderColor: file.color }}
+    >
+      <div className="flex items-start">
+        <div className="mr-4">
+          <div
+            className="p-2 rounded-full"
+            style={{ backgroundColor: `${file.color}20` }}
           >
-            <Trash2 className="h-4 w-4 text-gray-600" />
-          </Button>
+            {getFileIcon(file.type)}
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="flex justify-between mb-2">
+            <span className="font-medium text-gray-800">{file.title}</span>
+            <Badge variant="outline" className="text-xs">
+              {file.subject || "No subject"}
+            </Badge>
+          </div>
+          {isUploading ? (
+            <>
+              {status.error ? (
+                <div className="text-red-500 text-sm mt-2">{status.error}</div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between text-sm text-gray-600 mt-2 mb-1">
+                    <span>
+                      {status.statusText ||
+                        processingPhases.file[status.phase || 0]}
+                    </span>
+                    <span>{status.progress}%</span>
+                  </div>
+                  <Progress value={status.progress} className="h-2" />
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                {formatFileSize(file.size)}
+              </p>
+            </>
+          )}
+          <div className="flex justify-end mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRemoveFile(file.id)}
+              className="p-1"
+              disabled={isUploading && !status.error}
+            >
+              <Trash2 className="h-4 w-4 text-gray-600" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ---------------------
 // Link Preview Component
@@ -274,70 +374,76 @@ const LinkPreview = ({
   isUploading,
   processingStatus,
   processingPhases,
-  getProgressGradient,
   handleRemoveLink,
-}) => (
-  <div
-    className="p-4 border rounded transition hover:shadow-md"
-    style={{ borderColor: link.isYouTube ? "#B91C1C" : link.color }}
-  >
-    <div className="flex items-start">
-      <div className="mr-4">
-        {link.isYouTube ? (
-          <div className="p-2 rounded-full bg-red-100">
-            <Youtube className="h-8 w-8 text-red-600" />
-          </div>
-        ) : (
-          <div
-            className="p-2 rounded-full"
-            style={{ backgroundColor: `${link.color}20` }}
-          >
-            <Link className="h-8 w-8" style={{ color: link.color }} />
-          </div>
-        )}
-      </div>
-      <div className="flex-1">
-        <div className="flex justify-between mb-2">
-          <span className="font-medium text-gray-800">{link.title}</span>
-          <Badge variant="outline" className="text-xs">
-            {link.subject || "No subject"}
-          </Badge>
-        </div>
-        {isUploading ? (
-          <>
-            <p className="text-xs text-gray-600 truncate mb-2">{link.url}</p>
-            <p className="text-sm text-gray-600">
-              {processingPhases.link[processingStatus[link.id]?.phase || 0]}
-            </p>
-            <div className="h-2 rounded-full overflow-hidden bg-gray-200 mt-1">
-              <div
-                className="h-full transition-all duration-300"
-                style={{
-                  width: `${processingStatus[link.id]?.progress || 0}%`,
-                  background: getProgressGradient(
-                    processingStatus[link.id]?.progress || 0
-                  ),
-                }}
-              />
+}) => {
+  const status = processingStatus[link.id] || {
+    progress: 0,
+    phase: 0,
+    error: null,
+  };
+
+  return (
+    <div
+      className="p-4 border rounded transition hover:shadow-md"
+      style={{ borderColor: link.isYouTube ? "#B91C1C" : link.color }}
+    >
+      <div className="flex items-start">
+        <div className="mr-4">
+          {link.isYouTube ? (
+            <div className="p-2 rounded-full bg-red-100">
+              <Youtube className="h-8 w-8 text-red-600" />
             </div>
-          </>
-        ) : (
-          <p className="text-xs text-gray-600 truncate">{link.url}</p>
-        )}
-        <div className="flex justify-end mt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRemoveLink(link.id)}
-            className="p-1"
-          >
-            <Trash2 className="h-4 w-4 text-gray-600" />
-          </Button>
+          ) : (
+            <div
+              className="p-2 rounded-full"
+              style={{ backgroundColor: `${link.color}20` }}
+            >
+              <Link className="h-8 w-8" style={{ color: link.color }} />
+            </div>
+          )}
+        </div>
+        <div className="flex-1">
+          <div className="flex justify-between mb-2">
+            <span className="font-medium text-gray-800">{link.title}</span>
+            <Badge variant="outline" className="text-xs">
+              {link.subject || "No subject"}
+            </Badge>
+          </div>
+          <p className="text-xs text-gray-600 truncate mb-1">{link.url}</p>
+          {isUploading ? (
+            <>
+              {status.error ? (
+                <div className="text-red-500 text-sm mt-2">{status.error}</div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between text-sm text-gray-600 mt-2 mb-1">
+                    <span>
+                      {status.statusText ||
+                        processingPhases.link[status.phase || 0]}
+                    </span>
+                    <span>{status.progress}%</span>
+                  </div>
+                  <Progress value={status.progress} className="h-2" />
+                </>
+              )}
+            </>
+          ) : null}
+          <div className="flex justify-end mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRemoveLink(link.id)}
+              className="p-1"
+              disabled={isUploading && !status.error}
+            >
+              <Trash2 className="h-4 w-4 text-gray-600" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ---------------------
 // Preview Section Component
@@ -434,6 +540,10 @@ const UploadMaterialsPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [processingStatus, setProcessingStatus] = useState({});
   const [youtubeLoading, setYoutubeLoading] = useState(false);
+
+  // Move the useParams hook call to the component level
+  const params = useParams();
+  const sessionId = params.sessionId;
 
   // Utility functions
   const getRandomBubbleColor = () => {
@@ -596,34 +706,60 @@ const UploadMaterialsPage = () => {
     });
     setProcessingStatus(initialStatus);
 
+    if (!sessionId) {
+      console.error("No session ID found in URL");
+      // Show error in UI
+      setProcessingStatus((prev) => {
+        const newStatus = { ...prev };
+        files.forEach((file) => {
+          newStatus[file.id] = {
+            ...newStatus[file.id],
+            error: "No session ID found. Please check the URL.",
+            statusText: "Error",
+            phase: -1,
+          };
+        });
+        return newStatus;
+      });
+      return;
+    }
+
+    console.log("Starting upload with session ID:", sessionId);
+
     // For each PDF file that hasn't been uploaded, perform the Vercel Blob upload
     for (const fileObj of files) {
       if (fileObj.type === "application/pdf" && !fileObj.uploaded) {
         try {
           const materialId = await uploadPdfFile(
             fileObj.file,
-            setProcessingStatus
+            setProcessingStatus,
+            sessionId
           );
-          // Update the file object in state with the new materialId and mark it as uploaded.
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === fileObj.id ? { ...f, id: materialId, uploaded: true } : f
-            )
-          );
+
+          if (materialId) {
+            // Update the file object in state with the new materialId and mark it as uploaded
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === fileObj.id
+                  ? { ...f, id: materialId, uploaded: true }
+                  : f
+              )
+            );
+          }
         } catch (error) {
           console.error("Error during file upload:", error);
+          setProcessingStatus((prev) => ({
+            ...prev,
+            [fileObj.id]: {
+              ...prev[fileObj.id],
+              error: `Upload failed: ${error.message || "Unknown error"}`,
+              statusText: "Failed",
+              phase: -1,
+            },
+          }));
         }
       }
     }
-
-    // // For non-PDF files or after uploading PDFs, you can simulate processing as before:
-    // const allItems = [...files];
-    // allItems.forEach((item) => {
-    //   simulateProcessing(
-    //     item.id,
-    //     item.type === "application/pdf" ? true : false
-    //   );
-    // });
   };
 
   const simulateProcessing = (id, isFile) => {

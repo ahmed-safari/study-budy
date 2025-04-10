@@ -4,8 +4,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/utils/database";
 
 export async function POST(request) {
+  // Extract sessionId from the URL parameter
+  const sessionId = new URL(request.url).searchParams.get("sessionId");
+  if (!sessionId) {
+    return NextResponse.json(
+      { error: "Session ID is required" },
+      { status: 400 }
+    );
+  }
+
   const body = await request.json();
   console.log("Request body: ", body);
+  console.log("Session ID: ", sessionId);
 
   try {
     const jsonResponse = await handleUpload({
@@ -14,42 +24,44 @@ export async function POST(request) {
       onBeforeGenerateToken: async (pathname) => {
         return {
           allowedContentTypes: ["application/pdf"], // Allow PDFs for this upload.
-          tokenPayload: JSON.stringify({}),
+          tokenPayload: JSON.stringify({ sessionId }), // Pass sessionId in token payload
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
-        console.log("Blob upload completed", blob, tokenPayload);
-        // Optionally, perform post-upload processing here.
+        console.log("Blob upload completed", blob);
 
-        // For example, save the blob information to your database.
-        const { name, size, type, url } = blob;
-        // Sechema:
-        // id          String      @id @default(cuid())
-        // title       String?
-        // description String?
-        // type        String
-        // link        String?
-        // fileName    String?
-        // rawContent  String?
+        try {
+          // Parse the token payload to get the session ID
+          const payload = JSON.parse(tokenPayload || "{}");
+          const sessionIdFromToken = payload.sessionId || sessionId;
 
-        // studySessionId String
-        // studySession   StudySession @relation(fields: [studySessionId], references: [id])
-        prisma.material.create({
-          data: {
-            type: type,
-            link: url,
-            fileName: name,
-            studySessionId: "some-session-id", // Replace with actual session ID
-          },
-        });
-        console.log("Material saved to database", { name, size, type, url });
+          // Extract file information from the blob
+          const { name, size, type, url } = blob;
+
+          // Create the material in the database
+          const material = await prisma.material.create({
+            data: {
+              title: name.split(".")[0], // Use filename (without extension) as title
+              type: type,
+              link: url,
+              fileName: name,
+              studySessionId: sessionIdFromToken,
+            },
+          });
+
+          console.log("Material saved to database", material);
+          return { success: true, materialId: material.id };
+        } catch (dbError) {
+          console.error("Failed to save material to database:", dbError);
+          return { success: false, error: dbError.message };
+        }
       },
     });
 
     console.log("Upload requested successfully: ", jsonResponse);
-
     return NextResponse.json(jsonResponse);
   } catch (error) {
+    console.error("Upload error:", error);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
