@@ -37,15 +37,15 @@ export async function POST(request) {
           const sessionIdFromToken = payload.sessionId || sessionId;
 
           // Extract file information from the blob
-          const { pathname, size, type, url } = blob;
+          const { pathname, size, contentType, url } = blob;
 
           // Create the material in the database with initial status
           const material = await prisma.material.create({
             data: {
               title: pathname.split(".")[0], // Use filename (without extension) as title
-              type: type,
+              type: contentType.split("/")[1], // Extract type from contentType
               link: url,
-              fileName: pathname,
+              fileName: pathname, // Extract the file name from the URL
               studySessionId: sessionIdFromToken,
               status: "uploaded", // Initial status before processing
             },
