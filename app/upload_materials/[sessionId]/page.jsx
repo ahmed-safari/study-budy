@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   File,
   X,
@@ -19,6 +19,15 @@ import {
   CheckCircle,
   Image,
   Clock,
+  Brain,
+  Sparkles,
+  Book,
+  PenTool,
+  FlaskConical,
+  Share2,
+  Download,
+  MoreHorizontal,
+  ExternalLink,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 
@@ -597,6 +606,299 @@ const PreviewSection = ({
 );
 
 // ---------------------
+// Material Actions Component
+// ---------------------
+const MaterialActions = ({ material, sessionId }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showCreateQuizModal, setShowCreateQuizModal] = useState(false);
+  const [quizParams, setQuizParams] = useState({
+    numQuestions: 5,
+    difficulty: "medium",
+    questionType: "multiple-choice",
+  });
+  const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
+
+  // Array of possible actions for a material
+  const actions = [
+    {
+      icon: <Brain className="h-4 w-4" />,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+      label: "Create Quiz",
+      onClick: () => setShowCreateQuizModal(true),
+      disabled: material.status !== "Ready" && material.status !== "ready",
+    },
+    {
+      icon: <Sparkles className="h-4 w-4" />,
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
+      label: "Summarize",
+      onClick: () => alert("Summarize functionality coming soon!"),
+      disabled: material.status !== "Ready" && material.status !== "ready",
+    },
+    {
+      icon: <Book className="h-4 w-4" />,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+      label: "Study Notes",
+      onClick: () => alert("Study Notes functionality coming soon!"),
+      disabled: material.status !== "Ready" && material.status !== "ready",
+    },
+    {
+      icon: <FlaskConical className="h-4 w-4" />,
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+      label: "Analyze",
+      onClick: () => alert("Analysis functionality coming soon!"),
+      disabled: material.status !== "Ready" && material.status !== "ready",
+    },
+    {
+      icon: <Share2 className="h-4 w-4" />,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-100",
+      label: "Share",
+      onClick: () => alert("Sharing functionality coming soon!"),
+      disabled: false,
+    },
+    {
+      icon: <Download className="h-4 w-4" />,
+      color: "text-gray-600",
+      bgColor: "bg-gray-100",
+      label: "Download",
+      onClick: () => alert("Download functionality coming soon!"),
+      disabled: false,
+    },
+  ];
+
+  const handleCreateQuiz = async () => {
+    setIsCreatingQuiz(true);
+    // Simulating quiz generation - in a real app this would call an API
+    setTimeout(() => {
+      setIsCreatingQuiz(false);
+      setShowCreateQuizModal(false);
+      alert(
+        `Quiz created with ${quizParams.numQuestions} ${quizParams.questionType} questions at ${quizParams.difficulty} difficulty!`
+      );
+    }, 2000);
+  };
+
+  return (
+    <>
+      <div className="mt-3 border-t pt-3">
+        <div className="flex flex-wrap gap-2">
+          {/* Display first 2 actions as buttons */}
+          {actions.slice(0, 2).map((action, index) => (
+            <Button
+              key={index}
+              size="sm"
+              variant="outline"
+              className={`transition-all px-2.5 py-1.5 h-auto flex items-center gap-1.5 text-xs ${
+                action.color
+              } border-gray-200 hover:bg-gray-50 ${
+                action.disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              onClick={action.disabled ? undefined : action.onClick}
+              disabled={action.disabled}
+            >
+              <span className={`${action.bgColor} p-1 rounded-full`}>
+                {action.icon}
+              </span>
+              {action.label}
+            </Button>
+          ))}
+
+          {/* More button to show additional actions */}
+          <div className="relative">
+            <Button
+              size="sm"
+              variant="outline"
+              className="transition-all px-2 py-1 h-auto text-gray-600 border-gray-200 hover:bg-gray-50"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+
+            {/* Dropdown menu for additional actions */}
+            {isOpen && (
+              <div className="absolute z-10 right-0 mt-1 w-48 origin-top-right bg-white rounded-md shadow-lg border border-gray-100 focus:outline-none">
+                <div className="py-1">
+                  {actions.slice(2).map((action, index) => (
+                    <button
+                      key={index}
+                      className={`flex items-center gap-2 px-4 py-2 text-sm text-left w-full hover:bg-gray-50 ${
+                        action.disabled ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                      onClick={action.disabled ? undefined : action.onClick}
+                      disabled={action.disabled}
+                    >
+                      <span className={`${action.bgColor} p-1 rounded-full`}>
+                        {action.icon}
+                      </span>
+                      <span className={action.color}>{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Create Quiz Modal */}
+      {showCreateQuizModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-5 shadow-xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Create Quiz
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setShowCreateQuizModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Create a customized quiz based on &quot;
+                {material.title || "this material"}&quot; to test your
+                knowledge.
+              </p>
+
+              <div className="space-y-4 mb-6">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-700">
+                    Number of Questions
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {[3, 5, 10, 15, 20].map((value) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={
+                          quizParams.numQuestions === value
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        className={
+                          quizParams.numQuestions === value
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                            : "border-gray-200"
+                        }
+                        onClick={() =>
+                          setQuizParams({
+                            ...quizParams,
+                            numQuestions: value,
+                          })
+                        }
+                      >
+                        {value}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-700">Difficulty</Label>
+                  <div className="flex items-center gap-2">
+                    {["easy", "medium", "hard"].map((diff) => (
+                      <Button
+                        key={diff}
+                        type="button"
+                        variant={
+                          quizParams.difficulty === diff ? "default" : "outline"
+                        }
+                        size="sm"
+                        className={
+                          quizParams.difficulty === diff
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                            : "border-gray-200"
+                        }
+                        onClick={() =>
+                          setQuizParams({ ...quizParams, difficulty: diff })
+                        }
+                      >
+                        {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-700">Question Type</Label>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { value: "multiple-choice", label: "Multiple Choice" },
+                      { value: "true-false", label: "True/False" },
+                      { value: "short-answer", label: "Short Answer" },
+                    ].map((type) => (
+                      <Button
+                        key={type.value}
+                        type="button"
+                        variant={
+                          quizParams.questionType === type.value
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        className={
+                          quizParams.questionType === type.value
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                            : "border-gray-200"
+                        }
+                        onClick={() =>
+                          setQuizParams({
+                            ...quizParams,
+                            questionType: type.value,
+                          })
+                        }
+                      >
+                        {type.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateQuizModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                onClick={handleCreateQuiz}
+                disabled={isCreatingQuiz}
+              >
+                {isCreatingQuiz ? (
+                  <div className="flex items-center">
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Brain className="mr-2 h-4 w-4" />
+                    Create Quiz
+                  </div>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+// ---------------------
 // Existing Materials Component
 // ---------------------
 const ExistingMaterialsSection = ({
@@ -607,6 +909,8 @@ const ExistingMaterialsSection = ({
   getFileIcon,
   formatFileSize,
 }) => {
+  const router = useRouter();
+
   if (isLoadingMaterials) {
     return (
       <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition mt-6">
@@ -696,7 +1000,8 @@ const ExistingMaterialsSection = ({
             return (
               <div
                 key={material.id}
-                className="p-4 border rounded transition hover:shadow-md"
+                className="p-4 border rounded transition hover:shadow-md cursor-pointer"
+                onClick={() => router.push(`/materials/${material.id}`)}
               >
                 <div className="flex items-start">
                   <div className="mr-4">
@@ -756,6 +1061,20 @@ const ExistingMaterialsSection = ({
                           <Progress value={status.progress} className="h-2" />
                         </div>
                       )}
+
+                    <div className="mt-3 flex justify-between items-center">
+                      <div>
+                        <ExternalLink className="h-4 w-4 text-indigo-600 inline-block mr-1 align-text-bottom" />
+                        <span className="text-sm text-indigo-600 hover:underline">
+                          View Details
+                        </span>
+                      </div>
+
+                      <MaterialActions
+                        material={material}
+                        sessionId={material.sessionId}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -976,20 +1295,23 @@ const UploadMaterialsPage = () => {
       ) {
         setYoutubeLoading(true);
         try {
-          // Call your API route to fetch metadata
+          // Call your API route to fetch metadata and generate a description
+          // Pass the session ID to save it directly to the database
           const response = await fetch(
-            `/api/youtube?url=${encodeURIComponent(currentLink)}`
+            `/api/youtube?url=${encodeURIComponent(
+              currentLink
+            )}&sessionId=${sessionId}`
           );
           const responseJson = await response.json();
-          //   const response = await response.json();
-          if (!responseJson.success) throw new Error(data.error);
+          if (!responseJson.success) throw new Error(responseJson.error);
           const metadata = responseJson.data;
           console.log("YouTube metadata client:", metadata);
           const newLink = {
-            id: Math.random().toString(36).substring(7),
+            id: metadata.materialId || Math.random().toString(36).substring(7),
             url: currentLink,
             isYouTube: true,
             title: metadata.title,
+            description: metadata.description, // Include the description
             duration: metadata.duration,
             thumbnailUrl: metadata.thumbnailUrl,
             subject: "YouTube",
@@ -1009,6 +1331,7 @@ const UploadMaterialsPage = () => {
           url: currentLink,
           isYouTube: false,
           title: "Web Resource",
+          description: "External web resource link", // Add a default description
           subject: "",
           color: getRandomBubbleColor(),
         };

@@ -1,0 +1,478 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
+import {
+  File,
+  FileText,
+  FileAudio,
+  FileVideo,
+  Youtube,
+  Link as LinkIcon,
+  Clock,
+  Calendar,
+  ArrowLeft,
+  Brain,
+  Sparkles,
+  Book,
+  PenTool,
+  FlaskConical,
+  Clock4,
+  Lightbulb,
+  GraduationCap,
+  MapPin,
+  Share2,
+  Download,
+  ExternalLink,
+  Clipboard,
+  CheckCircle,
+  Edit,
+  Loader,
+} from "lucide-react";
+
+const MaterialDetailsPage = () => {
+  const [material, setMaterial] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const params = useParams();
+  const router = useRouter();
+  const materialId = params.materialId;
+
+  useEffect(() => {
+    const fetchMaterialDetails = async () => {
+      if (!materialId) return;
+
+      try {
+        const response = await fetch(`/api/materials/${materialId}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch material: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setMaterial({
+            id: data.material_id,
+            title: data.title,
+            fileName: data.fileName,
+            type: data.type,
+            link: data.link,
+            status: data.material_status,
+            rawContent: data.rawContent,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+          });
+        } else {
+          throw new Error(data.error || "Unknown error fetching material");
+        }
+      } catch (error) {
+        console.error("Error fetching material:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMaterialDetails();
+  }, [materialId]);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getFileIcon = (type) => {
+    if (!type) return <File className="h-10 w-10 text-gray-600" />;
+
+    const fileTypeIcons = {
+      "application/pdf": <FileText className="h-10 w-10 text-blue-600" />,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        <FileText className="h-10 w-10 text-blue-600" />,
+      "video/mp4": <FileVideo className="h-10 w-10 text-purple-600" />,
+      "audio/mpeg": <FileAudio className="h-10 w-10 text-emerald-600" />,
+      "audio/wav": <FileAudio className="h-10 w-10 text-emerald-600" />,
+      youtube: <Youtube className="h-10 w-10 text-red-600" />,
+      default: <File className="h-10 w-10 text-gray-600" />,
+    };
+
+    // Special handling for YouTube links
+    if (
+      material?.link?.includes("youtube.com") ||
+      material?.link?.includes("youtu.be")
+    ) {
+      return fileTypeIcons.youtube;
+    }
+
+    return fileTypeIcons[type] || fileTypeIcons.default;
+  };
+
+  const getStatusBadgeColor = (status) => {
+    const statusColors = {
+      ready: "bg-green-100 text-green-800",
+      Ready: "bg-green-100 text-green-800",
+      processing: "bg-blue-100 text-blue-800",
+      Processing: "bg-blue-100 text-blue-800",
+      "Converting to text": "bg-blue-100 text-blue-800",
+      error: "bg-red-100 text-red-800",
+      unsupported: "bg-orange-100 text-orange-800",
+      uploading: "bg-gray-100 text-gray-800",
+    };
+
+    return statusColors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const actionCards = [
+    {
+      title: "Create Quiz",
+      description:
+        "Generate a custom quiz based on this material to test your knowledge",
+      icon: <Brain className="h-8 w-8 text-white" />,
+      color: "from-purple-500 to-indigo-600",
+      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      path: `/quiz/${materialId}/create`,
+    },
+    {
+      title: "Create Study Plan",
+      description:
+        "Generate a personalized study plan with key topics and schedules",
+      icon: <Calendar className="h-8 w-8 text-white" />,
+      color: "from-blue-500 to-cyan-600",
+      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      path: `/study-plan/${materialId}/create`,
+    },
+    {
+      title: "Generate Flashcards",
+      description:
+        "Create flashcards with key concepts and definitions for quick review",
+      icon: <Clipboard className="h-8 w-8 text-white" />,
+      color: "from-amber-500 to-orange-600",
+      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      path: `/flashcards/${materialId}/create`,
+    },
+    {
+      title: "Summarize",
+      description:
+        "Get an AI-generated summary of this material's key points and concepts",
+      icon: <Sparkles className="h-8 w-8 text-white" />,
+      color: "from-rose-500 to-pink-600",
+      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      path: `/summary/${materialId}`,
+    },
+    {
+      title: "Study Notes",
+      description:
+        "View and edit your notes for this material or create new ones",
+      icon: <Book className="h-8 w-8 text-white" />,
+      color: "from-emerald-500 to-green-600",
+      disabled: false,
+      path: `/notes/${materialId}`,
+    },
+    {
+      title: "Analyze",
+      description:
+        "Get detailed analysis and insights about this material's content",
+      icon: <FlaskConical className="h-8 w-8 text-white" />,
+      color: "from-teal-500 to-emerald-600",
+      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      path: `/analysis/${materialId}`,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-center p-6">
+        <div className="text-center">
+          <Loader className="h-12 w-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-medium text-gray-800">
+            Loading material details...
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+          <div className="text-red-500 text-5xl mb-4">!</div>
+          <h2 className="text-xl font-medium text-gray-800 mb-2">
+            Error Loading Material
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button
+            onClick={() => router.back()}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!material) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+          <div className="text-amber-500 text-5xl mb-4">?</div>
+          <h2 className="text-xl font-medium text-gray-800 mb-2">
+            Material Not Found
+          </h2>
+          <p className="text-gray-600 mb-6">
+            The requested material could not be found or may have been deleted.
+          </p>
+          <Button
+            onClick={() => router.back()}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col p-6 md:p-10">
+      <div className="max-w-6xl w-full mx-auto">
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          className="mb-6 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+
+        {/* Material header */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+          <div className="p-6 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
+                {getFileIcon(material.type)}
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                    {material.title || "Untitled Material"}
+                  </h1>
+                  <Badge
+                    className={`text-sm ${getStatusBadgeColor(
+                      material.status
+                    )}`}
+                  >
+                    {material.status || "Unknown"}
+                  </Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                  {material.fileName && (
+                    <div className="flex items-center gap-2">
+                      <File className="h-4 w-4 text-gray-400" />
+                      <span className="truncate max-w-xs">
+                        {material.fileName}
+                      </span>
+                    </div>
+                  )}
+                  {material.link && (
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="h-4 w-4 text-gray-400" />
+                      <a
+                        href={material.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate max-w-xs hover:text-indigo-600 hover:underline"
+                      >
+                        {material.link}
+                      </a>
+                    </div>
+                  )}
+                  {material.createdAt && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <span>Added: {formatDate(material.createdAt)}</span>
+                    </div>
+                  )}
+                  {material.type && (
+                    <div className="flex items-center gap-2">
+                      <File className="h-4 w-4 text-gray-400" />
+                      <span>Type: {material.type}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Material content preview */}
+        {material.rawContent && (
+          <Card className="mb-8 bg-white shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-indigo-600" />
+                Content Preview
+              </CardTitle>
+              <CardDescription>
+                Preview of the extracted content from this material
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-80 overflow-y-auto">
+                <pre className="text-sm whitespace-pre-wrap text-gray-700 font-mono">
+                  {material.rawContent.length > 1000
+                    ? `${material.rawContent.substring(0, 1000)}...`
+                    : material.rawContent}
+                </pre>
+              </div>
+            </CardContent>
+            <CardFooter className="justify-end">
+              <Button variant="outline" className="text-sm">
+                <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                View Full Content
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
+
+        {/* Material status */}
+        {material.status &&
+          material.status !== "Ready" &&
+          material.status !== "ready" && (
+            <Card className="mb-8 bg-white shadow-md border-blue-100">
+              <CardContent className="p-6">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-blue-700 font-medium">
+                      {material.status}
+                    </span>
+                    <span className="text-blue-700 font-medium">
+                      {material.status === "Processing"
+                        ? "75%"
+                        : material.status === "Converting to text"
+                        ? "80%"
+                        : material.status === "Skimming Through"
+                        ? "85%"
+                        : material.status === "Summarizing"
+                        ? "95%"
+                        : "50%"}
+                    </span>
+                  </div>
+                  <Progress
+                    value={
+                      material.status === "Processing"
+                        ? 75
+                        : material.status === "Converting to text"
+                        ? 80
+                        : material.status === "Skimming Through"
+                        ? 85
+                        : material.status === "Summarizing"
+                        ? 95
+                        : 50
+                    }
+                    className="h-2"
+                  />
+                  <p className="text-sm text-gray-600 mt-2">
+                    Your material is still being processed. Some features may be
+                    unavailable until processing is complete.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+        {/* Actions Section */}
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          Available Actions
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {actionCards.map((action, index) => (
+            <Card
+              key={index}
+              className={`relative overflow-hidden transition-all group hover:shadow-lg hover:scale-[1.02] ${
+                action.disabled ? "opacity-60" : ""
+              }`}
+            >
+              <div
+                className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-5 transition-opacity`}
+              />
+              <CardContent className="p-6 flex flex-col h-full">
+                <div
+                  className={`p-4 rounded-full bg-gradient-to-br ${action.color} self-start mb-4`}
+                >
+                  {action.icon}
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  {action.title}
+                </h3>
+                <p className="text-gray-600 mb-6 flex-grow">
+                  {action.description}
+                </p>
+                {action.disabled ? (
+                  <Button
+                    disabled
+                    className="w-full opacity-50 cursor-not-allowed"
+                  >
+                    Processing Required
+                  </Button>
+                ) : (
+                  <Link href={action.path} passHref>
+                    <Button
+                      className={`w-full bg-gradient-to-r ${action.color} text-white hover:shadow-md`}
+                    >
+                      {action.title}
+                    </Button>
+                  </Link>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Utility actions */}
+        <div className="flex flex-wrap justify-center gap-4">
+          <Button variant="outline" className="border-gray-300">
+            <Share2 className="h-4 w-4 mr-2" />
+            Share Material
+          </Button>
+          <Button variant="outline" className="border-gray-300">
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+          <Button variant="outline" className="border-gray-300">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Details
+          </Button>
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-12 text-center text-sm text-gray-500">
+          <p>
+            &copy; {new Date().getFullYear()} StudyBuddy. All rights reserved.
+          </p>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+export default MaterialDetailsPage;
