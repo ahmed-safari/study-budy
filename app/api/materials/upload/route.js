@@ -38,12 +38,13 @@ export async function POST(request) {
 
           // Extract file information from the blob
           const { pathname, size, contentType, url } = blob;
+          const type = contentType;
 
           // Create the material in the database with initial status
           const material = await prisma.material.create({
             data: {
               title: pathname.split(".")[0], // Use filename (without extension) as title
-              type: contentType.split("/")[1], // Extract type from contentType
+              type,
               link: url,
               fileName: pathname, // Extract the file name from the URL
               studySessionId: sessionIdFromToken,
