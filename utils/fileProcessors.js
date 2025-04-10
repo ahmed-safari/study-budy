@@ -1,7 +1,6 @@
 // fileProcessors.js
 import fetch from "node-fetch";
 import { OpenAI } from "openai";
-import pdfParse from "pdf-parse";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -57,7 +56,7 @@ class FileProcessor {
 }
 
 /**
- * PDF Processor
+ * PDF Processor using OpenAI API
  */
 class PdfProcessor extends FileProcessor {
   async process(fileUrl, { materialId, prisma, updateProgress }) {
@@ -70,11 +69,11 @@ class PdfProcessor extends FileProcessor {
       // Download the PDF
       const pdfBuffer = await this.downloadFile(fileUrl);
 
-      if (updateProgress) updateProgress(40, "Extracting text from PDF...");
+      if (updateProgress)
+        updateProgress(40, "Sending PDF to OpenAI for text extraction...");
 
-      // Extract text from PDF
-      const pdfData = await pdfParse(pdfBuffer);
-      const extractedText = pdfData.text;
+      // Use OpenAI to extract text from the PDF
+      const extractedText = await this.extractTextWithOpenAI(pdfBuffer);
 
       if (updateProgress) updateProgress(80, "Storing extracted text...");
 
@@ -105,6 +104,47 @@ class PdfProcessor extends FileProcessor {
         success: false,
         error: error.message,
       };
+    }
+  }
+
+  /**
+   * Extract text from PDF using OpenAI API
+   */
+  async extractTextWithOpenAI(pdfBuffer) {
+    try {
+      // Convert buffer to base64 for OpenAI API
+      const base64Pdf = pdfBuffer.toString("base64");
+
+      // Call OpenAI API to extract text from the PDF
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Please extract all the text content from this PDF document, preserving the formatting as much as possible. Include all text, tables, and relevant content.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:application/pdf;base64,${base64Pdf}`,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 4096,
+      });
+
+      // Return the extracted text
+      return response.choices[0]?.message?.content || "";
+    } catch (error) {
+      console.error("Error using OpenAI API:", error);
+      throw new Error(
+        `Failed to extract text using OpenAI API: ${error.message}`
+      );
     }
   }
 }
