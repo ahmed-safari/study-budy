@@ -91,24 +91,29 @@ class PdfProcessor extends FileProcessor {
       );
 
       if (updateProgress)
-        updateProgress(40, "Sending PDF to OpenAI for text extraction...");
+        updateProgress(40, "Sending PDF to OpenAI for processing...");
 
       // Update status to reflect the current step
       await this.updateStatus(materialId, "Converting to text", prisma);
 
-      // Use OpenAI to extract text from the PDF
-      const extractedText = await this.extractTextWithOpenAI(pdfBuffer);
+      // Extract text and generate description in a single API call
+      const { extractedText, description } = await this.processWithOpenAI(
+        pdfBuffer
+      );
+
       console.log(
         `Text extracted successfully for ${materialId}, length: ${extractedText.length} chars`
       );
+      console.log(`Description generated for ${materialId}: ${description}`);
 
-      if (updateProgress) updateProgress(80, "Storing extracted text...");
+      if (updateProgress) updateProgress(80, "Storing processed content...");
 
-      // Save the extracted text to the database
+      // Save the extracted text and description to the database
       await prisma.material.update({
         where: { id: materialId },
         data: {
           rawContent: extractedText,
+          description: description,
           status: "Ready", // Use consistent status naming
         },
       });
@@ -119,6 +124,7 @@ class PdfProcessor extends FileProcessor {
       return {
         success: true,
         text: extractedText,
+        description: description,
       };
     } catch (error) {
       console.error(`PDF processing error for ${materialId}:`, error);
@@ -143,17 +149,33 @@ class PdfProcessor extends FileProcessor {
   }
 
   /**
-   * Extract text from PDF using OpenAI API
+   * Process PDF with OpenAI API to extract text and generate description in one call
    */
-  async extractTextWithOpenAI(pdfBuffer) {
+  async processWithOpenAI(pdfBuffer) {
     try {
       // Convert buffer to base64 for OpenAI API
       const base64Pdf = pdfBuffer.toString("base64");
 
-      // Call OpenAI API to extract text from the PDF
+      // Call OpenAI API to extract text and generate description in one go
+      // Configured to return JSON and handle visual elements properly
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
+          {
+            role: "system",
+            content:
+              "You are a PDF content extractor that provides responses in JSON format only. When processing a PDF document:" +
+              "\n1. Extract ALL text content including headers, paragraphs, bullets, footnotes, and captions." +
+              "\n2. Pay special attention to images, graphs, tables, charts, and diagrams - describe their content in detail within the text. Include numerical data from tables, axis labels from charts, and key information from diagrams." +
+              "\n3. Create a very concise description (maximum 2 sentences) of what this document is about." +
+              "\n4. Always maintain the document's structure and formatting as much as possible." +
+              "\nReturn your response as valid JSON with the following format:" +
+              "\n{" +
+              '\n  "extracted_text": "The full extracted text with all content including descriptions of visual elements",' +
+              '\n  "description": "A concise 1-2 sentence description of the document"' +
+              "\n}" +
+              "\nDO NOT include any text, markdown formatting, or explanation outside the JSON structure.",
+          },
           {
             role: "user",
             content: [
@@ -164,22 +186,33 @@ class PdfProcessor extends FileProcessor {
                   filename: "document.pdf",
                 },
               },
-              {
-                type: "text",
-                text: "Please extract all the text content from this PDF document, preserving the formatting as much as possible. Include all text, tables, and relevant content.",
-              },
             ],
           },
         ],
         max_tokens: 4096,
+        response_format: { type: "json_object" },
       });
 
-      // Return the extracted text
-      return response.choices[0]?.message?.content || "";
+      // Parse the JSON response
+      const content = response.choices[0]?.message?.content || "";
+      let extractedText = "";
+      let description = "No description available";
+
+      try {
+        const jsonResponse = JSON.parse(content);
+        extractedText = jsonResponse.extracted_text || "";
+        description = jsonResponse.description || "No description available";
+      } catch (parseError) {
+        console.error("Error parsing JSON response:", parseError);
+        // Fallback to using the raw content if JSON parsing fails
+        extractedText = content;
+      }
+
+      return { extractedText, description };
     } catch (error) {
       console.error("Error using OpenAI API:", error);
       throw new Error(
-        `Failed to extract text using OpenAI API: ${error.message}`
+        `Failed to process PDF using OpenAI API: ${error.message}`
       );
     }
   }
