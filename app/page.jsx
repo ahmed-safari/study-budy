@@ -169,7 +169,10 @@ const LandingPage = () => {
                         Continue from where you left off.
                       </p>
                     </div>
-                    <Button className="mt-4 text-white bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 group-hover:scale-105 transition-all duration-300 flex items-center justify-center">
+                    <Button
+                      className="mt-4 text-white bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 group-hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                      onClick={() => router.push("/sessions")}
+                    >
                       View Sessions
                       <ChevronRight
                         className={`ml-2 h-5 w-5 transition-transform duration-300 ${
