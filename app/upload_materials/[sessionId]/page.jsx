@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -597,6 +597,177 @@ const PreviewSection = ({
 );
 
 // ---------------------
+// Existing Materials Component
+// ---------------------
+const ExistingMaterialsSection = ({
+  existingMaterials,
+  isLoadingMaterials,
+  loadError,
+  processingStatus,
+  getFileIcon,
+  formatFileSize,
+}) => {
+  if (isLoadingMaterials) {
+    return (
+      <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition mt-6">
+        <CardContent className="p-6 text-center">
+          <Loader className="h-8 w-8 text-gray-600 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-700">Loading existing materials...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition mt-6">
+        <CardContent className="p-6 text-center">
+          <div className="text-red-500 mb-2">Error loading materials</div>
+          <p className="text-gray-700 text-sm">{loadError}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (existingMaterials.length === 0) {
+    return null;
+  }
+
+  // Function to determine icon based on material type or URL
+  const getMaterialIcon = (material) => {
+    if (!material.type || material.type === "unknown") {
+      // Determine type from filename or URL if available
+      if (
+        material.name?.toLowerCase().endsWith(".pdf") ||
+        material.url?.toLowerCase().includes(".pdf")
+      ) {
+        return <FileText className="h-8 w-8 text-gray-600" />;
+      } else if (
+        material.url?.includes("youtube.com") ||
+        material.url?.includes("youtu.be")
+      ) {
+        return <Youtube className="h-8 w-8 text-red-600" />;
+      } else if (material.url) {
+        return <Link className="h-8 w-8 text-blue-600" />;
+      }
+    }
+
+    return getFileIcon(material.type || "default");
+  };
+
+  // Function to get status badge color based on material status
+  const getStatusBadgeColor = (status) => {
+    const statusColors = {
+      ready: "bg-green-100 text-green-800",
+      Ready: "bg-green-100 text-green-800",
+      processing: "bg-blue-100 text-blue-800",
+      Processing: "bg-blue-100 text-blue-800",
+      "Converting to text": "bg-blue-100 text-blue-800",
+      error: "bg-red-100 text-red-800",
+      unsupported: "bg-orange-100 text-orange-800",
+      uploading: "bg-gray-100 text-gray-800",
+    };
+
+    return statusColors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  return (
+    <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition mt-6">
+      <CardContent className="p-6">
+        <h2 className="text-xl font-medium text-gray-800 text-center mb-6">
+          Existing Study Materials
+        </h2>
+        <div className="space-y-4">
+          {existingMaterials.map((material) => {
+            const status = processingStatus[material.id] || {
+              progress:
+                material.status === "ready" || material.status === "Ready"
+                  ? 100
+                  : 50,
+              statusText: material.status || "Unknown",
+            };
+
+            const displayName =
+              material.title ||
+              (material.url
+                ? new URL(material.url).pathname.split("/").pop()
+                : "Unknown Material");
+
+            return (
+              <div
+                key={material.id}
+                className="p-4 border rounded transition hover:shadow-md"
+              >
+                <div className="flex items-start">
+                  <div className="mr-4">
+                    <div className="p-2 rounded-full bg-gray-100">
+                      {getMaterialIcon(material)}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-2">
+                      <span
+                        className="font-medium text-gray-800 truncate max-w-[250px]"
+                        title={displayName}
+                      >
+                        {displayName}
+                      </span>
+                      <Badge
+                        className={`text-xs ${getStatusBadgeColor(
+                          material.status
+                        )}`}
+                      >
+                        {material.status || "Unknown"}
+                      </Badge>
+                    </div>
+
+                    {material.url && (
+                      <p className="text-xs text-gray-600 truncate mb-2">
+                        {material.url}
+                      </p>
+                    )}
+
+                    {material.description && (
+                      <p
+                        className="text-sm text-gray-700 mb-2 line-clamp-2"
+                        title={material.description}
+                      >
+                        {material.description}
+                      </p>
+                    )}
+
+                    {material.createdAt && (
+                      <div className="flex items-center text-xs text-gray-500 mb-1">
+                        <Clock className="h-3 w-3 mr-1" />
+                        <span>
+                          {new Date(material.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+
+                    {status.progress < 100 &&
+                      material.status !== "error" &&
+                      material.status !== "unsupported" && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                            <span>{status.statusText || material.status}</span>
+                            <span>{status.progress}%</span>
+                          </div>
+                          <Progress value={status.progress} className="h-2" />
+                        </div>
+                      )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ---------------------
 // Ingest Button Component
 // ---------------------
 const IngestButton = ({ files, links, isUploading, handleIngest }) => (
@@ -630,9 +801,80 @@ const UploadMaterialsPage = () => {
   const [processingStatus, setProcessingStatus] = useState({});
   const [youtubeLoading, setYoutubeLoading] = useState(false);
 
+  // New state variables for existing materials
+  const [existingMaterials, setExistingMaterials] = useState([]);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
   // Move the useParams hook call to the component level
   const params = useParams();
   const sessionId = params.sessionId;
+
+  // Fetch existing materials when component mounts
+  useEffect(() => {
+    const fetchExistingMaterials = async () => {
+      if (!sessionId) return;
+
+      setIsLoadingMaterials(true);
+      setLoadError(null);
+
+      try {
+        // Fetch materials associated with this session
+        const response = await fetch(
+          `/api/study_session?sessionId=${sessionId}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch materials: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.session && data.session.materials) {
+          setExistingMaterials(data.session.materials);
+
+          // Update processing status for existing materials
+          const newProcessingStatus = { ...processingStatus };
+          data.session.materials.forEach((material) => {
+            if (material.status) {
+              // Map statuses to progress values
+              const statusMap = {
+                "Not Found": 50,
+                processing: 75,
+                "Converting to text": 80,
+                "Skimming Through": 85,
+                Summarizing: 95,
+                Ready: 100,
+                ready: 100,
+                error: 0,
+                unsupported: 0,
+              };
+
+              const progress = statusMap[material.status] || 50;
+              const phase = progress === 100 ? 4 : Math.floor(progress / 25);
+
+              newProcessingStatus[material.id] = {
+                progress,
+                statusText: material.status,
+                phase,
+                error: material.status === "error" ? "Processing failed" : null,
+                type: "file", // Default type
+              };
+            }
+          });
+
+          setProcessingStatus(newProcessingStatus);
+        }
+      } catch (error) {
+        console.error("Error fetching materials:", error);
+        setLoadError(error.message);
+      } finally {
+        setIsLoadingMaterials(false);
+      }
+    };
+
+    fetchExistingMaterials();
+  }, [sessionId]);
 
   // Utility functions
   const getRandomBubbleColor = () => {
@@ -916,6 +1158,14 @@ const UploadMaterialsPage = () => {
             getFileIcon={getFileIcon}
           />
         )}
+        <ExistingMaterialsSection
+          existingMaterials={existingMaterials}
+          isLoadingMaterials={isLoadingMaterials}
+          loadError={loadError}
+          processingStatus={processingStatus}
+          getFileIcon={getFileIcon}
+          formatFileSize={formatFileSize}
+        />
         {(files.length > 0 || links.length > 0) && (
           <IngestButton
             files={files}
