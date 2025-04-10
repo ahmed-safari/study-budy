@@ -18,26 +18,20 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Determine material status based on database state or processing state
-    // This can be expanded later with actual processing status from another table
-    let material_status = "Ready"; // Default to ready
-
-    if (material.rawContent) {
-      material_status = "Ready";
-    } else if (material.link) {
-      material_status = "Processing"; // Material is uploaded but not processed yet
-    } else {
-      material_status = "Not Found";
-    }
+    // Get the actual processing status from the database
+    const status = material.status || "pending";
 
     return NextResponse.json({
       success: true,
       material_id: material.id,
-      material_status,
+      material_status: status,
       title: material.title,
       fileName: material.fileName,
       type: material.type,
       link: material.link,
+      rawContent: material.rawContent, // Include the extracted text
+      createdAt: material.createdAt,
+      updatedAt: material.updatedAt,
     });
   } catch (error) {
     console.error("Error fetching material status:", error);

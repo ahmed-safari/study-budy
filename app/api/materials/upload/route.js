@@ -2,6 +2,7 @@
 import { handleUpload } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/utils/database";
+import { processFile } from "@/utils/fileProcessors";
 
 export async function POST(request) {
   // Extract sessionId from the URL parameter
@@ -38,7 +39,7 @@ export async function POST(request) {
           // Extract file information from the blob
           const { name, size, type, url } = blob;
 
-          // Create the material in the database
+          // Create the material in the database with initial status
           const material = await prisma.material.create({
             data: {
               title: name.split(".")[0], // Use filename (without extension) as title
@@ -46,10 +47,20 @@ export async function POST(request) {
               link: url,
               fileName: name,
               studySessionId: sessionIdFromToken,
+              status: "uploaded", // Initial status before processing
             },
           });
 
           console.log("Material saved to database", material);
+
+          // Start processing the file asynchronously
+          processFile(url, type, {
+            materialId: material.id,
+            prisma,
+          }).catch((error) => {
+            console.error(`Error processing material ${material.id}:`, error);
+          });
+
           return { success: true, materialId: material.id };
         } catch (dbError) {
           console.error("Failed to save material to database:", dbError);
