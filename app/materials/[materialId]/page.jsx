@@ -142,7 +142,7 @@ const MaterialDetailsPage = () => {
 
   const actionCards = [
     {
-      title: "Quizzes",
+      title: "View Quizzes",
       description:
         "View and create quizzes based on this material to test your knowledge",
       icon: <Brain className="h-8 w-8 text-white" />,
@@ -160,13 +160,13 @@ const MaterialDetailsPage = () => {
       path: `/study-plan/${materialId}/create`,
     },
     {
-      title: "Generate Flashcards",
+      title: "View Flashcards",
       description:
-        "Create flashcards with key concepts and definitions for quick review",
+        "View and create flashcards with key concepts for quick review",
       icon: <Clipboard className="h-8 w-8 text-white" />,
       color: "from-amber-500 to-orange-600",
       disabled: material?.status !== "Ready" && material?.status !== "ready",
-      path: `/flashcards/${materialId}/create`,
+      path: `/flashcards/${materialId}/list`,
     },
     {
       title: "Summarize",
