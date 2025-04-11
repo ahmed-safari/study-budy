@@ -175,7 +175,7 @@ const MaterialDetailsPage = () => {
       icon: <Sparkles className="h-8 w-8 text-white" />,
       color: "from-rose-500 to-pink-600",
       disabled: material?.status !== "Ready" && material?.status !== "ready",
-      path: `/summary/${materialId}`,
+      path: `/summary/${materialId}/list`,
     },
     {
       title: "Study Notes",
