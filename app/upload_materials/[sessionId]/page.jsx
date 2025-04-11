@@ -296,7 +296,7 @@ const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
           <File className="h-8 w-8 text-gray-600 mb-2" />
           <p className="text-gray-700">Drop your files here</p>
           <p className="text-sm text-gray-500 mb-4">
-            Supported: PDF, DOCX, MP4, MP3, WAV
+            Supported: PDF files only (max 30MB)
           </p>
           <Button
             onClick={() => document.getElementById(fileInputId).click()}
@@ -309,12 +309,12 @@ const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
             type="file"
             className="hidden"
             multiple
-            accept=".pdf,.docx,.mp4,.mp3,.wav"
+            accept=".pdf,application/pdf"
             onChange={handleFileChange}
           />
         </div>
       </div>
-      <p className="mt-4 text-xs text-gray-500">Max file size: 100MB</p>
+      <p className="mt-4 text-xs text-gray-500">Max file size: 30MB</p>
     </CardContent>
   </Card>
 );
@@ -329,49 +329,30 @@ const LinkUpload = ({
   links,
   handleRemoveLink,
   youtubeLoading,
+  disabled,
 }) => (
-  <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition hover:shadow-xl">
+  <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition hover:shadow-xl opacity-50 cursor-not-allowed">
     <CardContent className="p-6">
       <h2 className="text-xl font-medium text-gray-800 mb-4">Add Links</h2>
       <div className="flex space-x-2 mb-4">
         <Input
-          placeholder="Paste YouTube or resource URL"
+          placeholder="Feature temporarily disabled"
           value={currentLink}
           onChange={(e) => setCurrentLink(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleAddLink()}
+          disabled={true}
           className="flex-1 border"
         />
         <Button
           onClick={handleAddLink}
-          disabled={youtubeLoading}
+          disabled={true}
           className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
         >
-          {youtubeLoading ? <Loader className="h-5 w-5 animate-spin" /> : "Add"}
+          Add
         </Button>
       </div>
-      {links.map((link) => (
-        <div
-          key={link.id}
-          className="flex items-center justify-between p-3 border rounded mb-2"
-        >
-          <div className="flex items-center space-x-2">
-            {link.isYouTube ? (
-              <Youtube className="h-5 w-5 text-red-600" />
-            ) : (
-              <Link className="h-5 w-5 text-blue-600" />
-            )}
-            <span className="text-sm text-gray-800 truncate">{link.url}</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRemoveLink(link.id)}
-            className="p-1"
-          >
-            <X className="h-4 w-4 text-gray-600" />
-          </Button>
-        </div>
-      ))}
+      <div className="text-center p-4">
+        <p className="text-sm text-gray-500">Link upload is currently disabled</p>
+      </div>
     </CardContent>
   </Card>
 );
@@ -1250,15 +1231,20 @@ const UploadMaterialsPage = () => {
   const handleDrop = (e) => {
     e.preventDefault();
     const droppedFiles = Array.from(e.dataTransfer.files);
-    const validFiles = droppedFiles.filter((file) =>
-      [
-        "application/pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "video/mp4",
-        "audio/mpeg",
-        "audio/wav",
-      ].includes(file.type)
-    );
+    const validFiles = droppedFiles.filter((file) => {
+      // Check if file is PDF
+      if (file.type !== "application/pdf") {
+        return false;
+      }
+      
+      // Check file size (30MB = 30 * 1024 * 1024 bytes)
+      if (file.size > 30 * 1024 * 1024) {
+        alert(`File ${file.name} exceeds the 30MB size limit.`);
+        return false;
+      }
+      
+      return true;
+    });
     const newFiles = validFiles.map((file) => ({
       id: Math.random().toString(36).substring(7),
       file,
@@ -1274,8 +1260,23 @@ const UploadMaterialsPage = () => {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
+    // Filter for PDF files under 30MB
+    const validFiles = selectedFiles.filter(file => {
+      if (file.type !== "application/pdf") {
+        alert(`File ${file.name} is not a PDF file. Only PDF files are currently supported.`);
+        return false;
+      }
+      
+      if (file.size > 30 * 1024 * 1024) {
+        alert(`File ${file.name} exceeds the 30MB size limit.`);
+        return false;
+      }
+      
+      return true;
+    });
+    
     // For each file, simply store it in state along with an "uploaded" flag.
-    const newFiles = selectedFiles.map((file) => ({
+    const newFiles = validFiles.map((file) => ({
       id: Math.random().toString(36).substring(7),
       file,
       name: file.name,
@@ -1290,57 +1291,8 @@ const UploadMaterialsPage = () => {
   };
 
   const handleAddLink = async () => {
-    if (currentLink.trim() !== "") {
-      if (
-        currentLink.includes("youtube.com") ||
-        currentLink.includes("youtu.be")
-      ) {
-        setYoutubeLoading(true);
-        try {
-          // Call your API route to fetch metadata and generate a description
-          // Pass the session ID to save it directly to the database
-          const response = await fetch(
-            `/api/youtube?url=${encodeURIComponent(
-              currentLink
-            )}&sessionId=${sessionId}`
-          );
-          const responseJson = await response.json();
-          if (!responseJson.success) throw new Error(responseJson.error);
-          const metadata = responseJson.data;
-          console.log("YouTube metadata client:", metadata);
-          const newLink = {
-            id: metadata.materialId || Math.random().toString(36).substring(7),
-            url: currentLink,
-            isYouTube: true,
-            title: metadata.title,
-            description: metadata.description, // Include the description
-            duration: metadata.duration,
-            thumbnailUrl: metadata.thumbnailUrl,
-            subject: "YouTube",
-            color: "#B91C1C",
-          };
-          setLinks((prev) => [...prev, newLink]);
-          setCurrentLink("");
-        } catch (error) {
-          console.error("Error fetching YouTube metadata:", error);
-          // Optionally display an error message to the user
-        } finally {
-          setYoutubeLoading(false);
-        }
-      } else {
-        const newLink = {
-          id: Math.random().toString(36).substring(7),
-          url: currentLink,
-          isYouTube: false,
-          title: "Web Resource",
-          description: "External web resource link", // Add a default description
-          subject: "",
-          color: getRandomBubbleColor(),
-        };
-        setLinks((prev) => [...prev, newLink]);
-        setCurrentLink("");
-      }
-    }
+    // Disabled - do nothing
+    return;
   };
 
   const handleRemoveFile = (id) =>
@@ -1460,15 +1412,23 @@ const UploadMaterialsPage = () => {
             handleFileChange={handleFileChange}
             fileInputId="fileInput"
           />
-          <LinkUpload
-            currentLink={currentLink}
-            setCurrentLink={setCurrentLink}
-            handleAddLink={handleAddLink}
-            links={links}
-            handleRemoveLink={handleRemoveLink}
-            youtubeLoading={youtubeLoading}
-          />
+          <Card className="bg-white shadow-lg border rounded-lg overflow-hidden">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-medium text-gray-800 mb-4">Link Upload</h2>
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-dashed">
+                <Link className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-700">Link Upload Disabled</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  This feature is temporarily unavailable. Please upload PDF files only.
+                </p>
+              </div>
+              <div className="mt-4 text-xs text-center text-gray-500">
+                YouTube and web links will be supported in a future update.
+              </div>
+            </CardContent>
+          </Card>
         </div>
+        
         {(files.length > 0 || links.length > 0) && (
           <PreviewSection
             files={files}
