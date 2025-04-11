@@ -257,8 +257,77 @@ const SummaryCreationPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Summary parameters */}
-          <div className="lg:col-span-2">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Material Info - Now at the top */}
+            <Card className="bg-white shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-rose-600" />
+                  Material Info
+                </CardTitle>
+                <CardDescription>Source material details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    {material.type?.includes("pdf") ||
+                    material.fileName?.endsWith(".pdf") ? (
+                      <FileText className="h-12 w-12 text-blue-600" />
+                    ) : material.type?.includes("audio") ? (
+                      <FileAudio className="h-12 w-12 text-emerald-600" />
+                    ) : material.type?.includes("video") ? (
+                      <FileVideo className="h-12 w-12 text-purple-600" />
+                    ) : material.link?.includes("youtube") ? (
+                      <Youtube className="h-12 w-12 text-red-600" />
+                    ) : (
+                      <File className="h-12 w-12 text-gray-600" />
+                    )}
+                  </div>
+                  <div className="flex-grow">
+                    <h3
+                      className="text-lg font-medium text-gray-800 line-clamp-2"
+                      title={material.title}
+                    >
+                      {material.title || "Untitled Material"}
+                    </h3>
+                    <Badge className="mt-1 bg-green-100 text-green-800">
+                      Ready for Summary
+                    </Badge>
+
+                    <div className="mt-2 space-y-1 text-sm">
+                      {material.fileName && (
+                        <div className="flex items-center">
+                          <File className="h-3 w-3 text-gray-400 mr-1.5" />
+                          <span className="text-gray-600 text-xs truncate max-w-xs">
+                            {material.fileName}
+                          </span>
+                        </div>
+                      )}
+                      {material.type && (
+                        <div className="flex items-center">
+                          <FileText className="h-3 w-3 text-gray-400 mr-1.5" />
+                          <span className="text-gray-600 text-xs">
+                            Type: {material.type}
+                          </span>
+                        </div>
+                      )}
+                      {material.createdAt && (
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 text-gray-400 mr-1.5" />
+                          <span className="text-gray-600 text-xs">
+                            Added:{" "}
+                            {new Date(material.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Summary parameters - Now below Material Info */}
             <Card className="bg-white shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -324,102 +393,29 @@ const SummaryCreationPage = () => {
             </Card>
           </div>
 
-          {/* Material Info */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-rose-600" />
-                  Material Info
+          {/* Right Column - Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* About Summaries information card */}
+            <Card className="bg-white shadow-sm border border-rose-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center">
+                  <BookOpen className="h-4 w-4 mr-2 text-rose-600" />
+                  About Summaries
                 </CardTitle>
-                <CardDescription>Source material details</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center mb-4">
-                  {material.type?.includes("pdf") ||
-                  material.fileName?.endsWith(".pdf") ? (
-                    <FileText className="h-16 w-16 text-blue-600 mx-auto" />
-                  ) : material.type?.includes("audio") ? (
-                    <FileAudio className="h-16 w-16 text-emerald-600 mx-auto" />
-                  ) : material.type?.includes("video") ? (
-                    <FileVideo className="h-16 w-16 text-purple-600 mx-auto" />
-                  ) : material.link?.includes("youtube") ? (
-                    <Youtube className="h-16 w-16 text-red-600 mx-auto" />
-                  ) : (
-                    <File className="h-16 w-16 text-gray-600 mx-auto" />
-                  )}
-
-                  <h3
-                    className="text-lg font-medium text-gray-800 mt-2 line-clamp-2"
-                    title={material.title}
-                  >
-                    {material.title || "Untitled Material"}
-                  </h3>
-
-                  <Badge className="mt-2 bg-green-100 text-green-800">
-                    Ready for Summary
-                  </Badge>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  {material.fileName && (
-                    <div className="flex items-start">
-                      <File className="h-4 w-4 text-gray-400 mt-0.5 mr-2" />
-                      <span className="text-gray-600 break-words">
-                        {material.fileName}
-                      </span>
-                    </div>
-                  )}
-
-                  {material.createdAt && (
-                    <div className="flex items-start">
-                      <Clock className="h-4 w-4 text-gray-400 mt-0.5 mr-2" />
-                      <span className="text-gray-600">
-                        Added:{" "}
-                        {new Date(material.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-
-                  {material.type && (
-                    <div className="flex items-start">
-                      <FileText className="h-4 w-4 text-gray-400 mt-0.5 mr-2" />
-                      <span className="text-gray-600">
-                        Type: {material.type}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-4 border-t">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    About Summaries
-                  </h4>
-                  <p className="text-xs text-gray-500">
-                    AI-generated summaries analyze your material to identify key
-                    topics, concepts, and examples. The result is a structured,
-                    easy-to-read study guide that helps you understand and
-                    retain information effectively.
-                  </p>
-                </div>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  AI-generated summaries analyze your material to identify key
+                  topics, concepts, and examples. The result is a structured,
+                  easy-to-read study guide that helps you understand and retain
+                  information effectively.
+                </p>
               </CardContent>
-
-              <CardFooter className="flex justify-center border-t pt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/materials/${materialId}`)}
-                  className="w-full text-rose-600 border-rose-200 hover:bg-rose-50"
-                >
-                  <ArrowLeft className="mr-2 h-3 w-3" />
-                  Back to Material
-                </Button>
-              </CardFooter>
             </Card>
 
-            {/* Generation info card */}
+            {/* Generation info card - Now on the right */}
             {generating && (
-              <Card className="mt-4 bg-rose-50 border-rose-100 shadow-sm">
+              <Card className="bg-rose-50 border-rose-100 shadow-sm">
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center">
                     <Loader className="h-12 w-12 text-rose-600 animate-spin mb-4" />
@@ -435,28 +431,26 @@ const SummaryCreationPage = () => {
               </Card>
             )}
 
-            <div className="mt-4">
-              <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-none shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-start">
-                    <HelpCircle className="h-5 w-5 text-rose-600 mr-2 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-800 mb-1">
-                        Tips for Better Understanding
-                      </h4>
-                      <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
-                        <li>Read the summary to get a high-level overview</li>
-                        <li>Use the summary as a study guide</li>
-                        <li>
-                          Reference the original material for deeper
-                          understanding
-                        </li>
-                      </ul>
-                    </div>
+            {/* Tips card - Now on the right */}
+            <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-none shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start">
+                  <HelpCircle className="h-5 w-5 text-rose-600 mr-2 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-1">
+                      Tips for Better Understanding
+                    </h4>
+                    <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
+                      <li>Read the summary to get a high-level overview</li>
+                      <li>Use the summary as a study guide</li>
+                      <li>
+                        Reference the original material for deeper understanding
+                      </li>
+                    </ul>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
