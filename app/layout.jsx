@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +24,11 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <Toaster />
         <footer className="m-4 text-center text-sm text-gray-500">
+          <p>
+            &copy; {new Date().getFullYear()} StudyBuddy. All rights reserved.
+          </p>
           <p>
             Made with <span className="text-red-500">♥️</span> by DSAI4201
             Students

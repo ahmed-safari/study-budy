@@ -281,15 +281,6 @@ const Header = () => (
 );
 
 // ---------------------
-// Footer Component
-// ---------------------
-const Footer = () => (
-  <footer className="mt-12 text-center text-sm text-gray-500">
-    <p>&copy; {new Date().getFullYear()} StudyBuddy. All rights reserved.</p>
-  </footer>
-);
-
-// ---------------------
 // File Upload Component
 // ---------------------
 const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
@@ -1524,7 +1515,6 @@ const UploadMaterialsPage = () => {
               </p>
             </div>
           )}
-        <Footer />
       </div>
     </div>
   );

@@ -290,13 +290,6 @@ const FlashcardListPage = () => {
             ))
           )}
         </div>
-
-        {/* Footer */}
-        <footer className="mt-12 text-center text-sm text-gray-500">
-          <p>
-            &copy; {new Date().getFullYear()} StudyBuddy. All rights reserved.
-          </p>
-        </footer>
       </div>
     </div>
   );

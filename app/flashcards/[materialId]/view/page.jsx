@@ -466,11 +466,6 @@ const FlashcardsPage = () => {
             indicatorClassName="bg-gradient-to-r from-emerald-500 to-green-600"
           />
         </div>
-
-        {/* Footer */}
-        <footer className="mt-12 text-center text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} StudyBuddy Flashcards</p>
-        </footer>
       </div>
     </div>
   );
