@@ -25,11 +25,6 @@ import {
   ArrowLeft,
   Brain,
   Sparkles,
-  Book,
-  PenTool,
-  FlaskConical,
-  Clock4,
-  Lightbulb,
   GraduationCap,
   MapPin,
   Share2,
@@ -220,7 +215,7 @@ const MaterialDetailsPage = () => {
         "Generate a personalized study plan with key topics and schedules",
       icon: <Calendar className="h-8 w-8 text-white" />,
       color: "from-blue-500 to-cyan-600",
-      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      disabled: true,
       path: `/study-plan/${materialId}/create`,
     },
     {
@@ -233,7 +228,7 @@ const MaterialDetailsPage = () => {
       path: `/flashcards/${materialId}/list`,
     },
     {
-      title: "Summarize",
+      title: "View Summaries",
       description:
         "Get an AI-generated summary of this material's key points and concepts",
       icon: <Sparkles className="h-8 w-8 text-white" />,
@@ -242,22 +237,22 @@ const MaterialDetailsPage = () => {
       path: `/summary/${materialId}/list`,
     },
     {
-      title: "Study Notes",
+      title: "Mind Map",
       description:
-        "View and edit your notes for this material or create new ones",
-      icon: <Book className="h-8 w-8 text-white" />,
+        "Generate visual mind maps to help you understand and connect key concepts",
+      icon: <GraduationCap className="h-8 w-8 text-white" />,
       color: "from-emerald-500 to-green-600",
-      disabled: false,
-      path: `/notes/${materialId}`,
+      disabled: true,
+      path: `/mindmap/${materialId}`,
     },
     {
-      title: "Analyze",
+      title: "Audio Lecture",
       description:
-        "Get detailed analysis and insights about this material's content",
-      icon: <FlaskConical className="h-8 w-8 text-white" />,
+        "Listen to AI-generated audio explaining the material like a teacher",
+      icon: <FileAudio className="h-8 w-8 text-white" />,
       color: "from-teal-500 to-emerald-600",
-      disabled: material?.status !== "Ready" && material?.status !== "ready",
-      path: `/analysis/${materialId}`,
+      disabled: true,
+      path: `/audio-lecture/${materialId}`,
     },
   ];
 
