@@ -37,6 +37,7 @@ model Material {
   studySession   StudySession @relation(fields: [studySessionId], references: [id])
   quizzes       Quiz[]
   flashcardDecks FlashcardDeck[]
+  summaries     Summary[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
@@ -86,4 +87,14 @@ model Flashcard {
   deck       FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
+}
+
+model Summary {
+  id          String      @id @default(cuid())
+  title       String
+  content     String      @db.Text
+  materialId  String
+  material    Material    @relation(fields: [materialId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
