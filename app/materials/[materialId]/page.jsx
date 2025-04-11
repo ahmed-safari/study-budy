@@ -48,6 +48,7 @@ const MaterialDetailsPage = () => {
   const [error, setError] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+  const [showShareTooltip, setShowShareTooltip] = useState(false);
   const params = useParams();
   const router = useRouter();
   const materialId = params.materialId;
@@ -138,6 +139,69 @@ const MaterialDetailsPage = () => {
     };
 
     return statusColors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setShowShareTooltip(true);
+        setTimeout(() => setShowShareTooltip(false), 2000);
+      })
+      .catch((err) => {
+        console.error("Could not copy URL: ", err);
+      });
+  };
+
+  const handleDownload = () => {
+    // If material has a direct link (like a PDF URL), use that for download
+    if (
+      material.link &&
+      (material.link.includes(".pdf") ||
+        material.link.includes(".doc") ||
+        material.link.includes(".txt") ||
+        material.link.includes("/download"))
+    ) {
+      // Create a link element
+      const a = document.createElement("a");
+      a.href = material.link;
+      a.download = material.fileName || material.title || "download";
+      a.target = "_blank";
+
+      // Append to the document, click it, and remove it
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    // Fall back to raw content if there's no direct download link
+    if (!material.rawContent) return;
+
+    // Create filename from material title
+    const filename = `${material.title
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase()}.txt`;
+
+    // Create a blob with the content
+    const blob = new Blob([material.rawContent], { type: "text/plain" });
+
+    // Create a temporary URL for the blob
+    const url = URL.createObjectURL(blob);
+
+    // Create a link element
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+
+    // Append to the document, click it, and remove it
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Revoke the URL to free up memory
+    URL.revokeObjectURL(url);
   };
 
   const actionCards = [
@@ -455,17 +519,31 @@ const MaterialDetailsPage = () => {
 
         {/* Utility actions */}
         <div className="flex flex-wrap justify-center gap-4">
-          <Button variant="outline" className="border-gray-300">
-            <Share2 className="h-4 w-4 mr-2" />
-            Share Material
+          <Button
+            variant="outline"
+            className="border-gray-300"
+            onClick={handleShare}
+          >
+            {showShareTooltip ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Material
+              </>
+            )}
           </Button>
-          <Button variant="outline" className="border-gray-300">
+          <Button
+            variant="outline"
+            className="border-gray-300"
+            onClick={handleDownload}
+            disabled={!material.rawContent}
+          >
             <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
-          <Button variant="outline" className="border-gray-300">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Details
+            Download Content
           </Button>
         </div>
       </div>
