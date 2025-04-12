@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/utils/database";
 
 export async function GET(request, { params }) {
-  const { materialId } = params;
+  const { materialId } = await params;
 
   if (!materialId) {
     return NextResponse.json(
