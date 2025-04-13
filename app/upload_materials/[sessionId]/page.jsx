@@ -281,6 +281,71 @@ const Header = () => (
 );
 
 // ---------------------
+// Session Header Component
+// ---------------------
+const SessionHeader = ({ sessionDetails, isLoading }) => {
+  if (isLoading) {
+    return (
+      <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition mb-8">
+        <CardContent className="p-6">
+          <div className="flex flex-col gap-3 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+            <div className="flex justify-between items-center mt-2">
+              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!sessionDetails) return null;
+
+  return (
+    <Card className="bg-white shadow-lg border rounded-lg overflow-hidden transition mb-8">
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row justify-between">
+          <div className="mb-4 md:mb-0">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              {sessionDetails.title}
+            </h2>
+            <Badge className="mt-2 bg-blue-100 text-blue-800 hover:bg-blue-200">
+              {sessionDetails.subject}
+            </Badge>
+            {sessionDetails.description && (
+              <p className="text-gray-600 mt-2 line-clamp-2 md:line-clamp-none">
+                {sessionDetails.description}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col items-end justify-center text-sm">
+            <div className="flex items-center text-gray-500 mb-1">
+              <Clock className="h-4 w-4 mr-1" />
+              <span>
+                Created:{" "}
+                {new Date(sessionDetails.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="flex items-center text-gray-500">
+              <File className="h-4 w-4 mr-1" />
+              <span>
+                {sessionDetails.materialsCount ||
+                  sessionDetails.materials?.length ||
+                  0}{" "}
+                Materials
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ---------------------
 // File Upload Component
 // ---------------------
 const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
@@ -351,7 +416,9 @@ const LinkUpload = ({
         </Button>
       </div>
       <div className="text-center p-4">
-        <p className="text-sm text-gray-500">Link upload is currently disabled</p>
+        <p className="text-sm text-gray-500">
+          Link upload is currently disabled
+        </p>
       </div>
     </CardContent>
   </Card>
@@ -1108,75 +1175,123 @@ const UploadMaterialsPage = () => {
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
+  // New state variable for session details
+  const [sessionDetails, setSessionDetails] = useState(null);
+
   // Move the useParams hook call to the component level
   const params = useParams();
   const sessionId = params.sessionId;
 
-  // Fetch existing materials when component mounts
+  // Fetch existing materials and session details when component mounts
   useEffect(() => {
-    const fetchExistingMaterials = async () => {
+    const fetchSessionData = async () => {
       if (!sessionId) return;
 
       setIsLoadingMaterials(true);
       setLoadError(null);
 
       try {
-        // Fetch materials associated with this session
+        // Fetch session details and materials associated with this session
         const response = await fetch(
           `/api/study_session?sessionId=${sessionId}`
         );
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch materials: ${response.status}`);
+          throw new Error(`Failed to fetch session data: ${response.status}`);
         }
 
         const data = await response.json();
 
-        if (data.success && data.session && data.session.materials) {
-          setExistingMaterials(data.session.materials);
+        if (data.success && data.session) {
+          setSessionDetails(data.session);
 
-          // Update processing status for existing materials
-          const newProcessingStatus = { ...processingStatus };
-          data.session.materials.forEach((material) => {
-            if (material.status) {
-              // Map statuses to progress values
-              const statusMap = {
-                "Not Found": 50,
-                processing: 75,
-                "Converting to text": 80,
-                "Skimming Through": 85,
-                Summarizing: 95,
-                Ready: 100,
-                ready: 100,
-                error: 0,
-                unsupported: 0,
-              };
+          if (data.session.materials) {
+            setExistingMaterials(data.session.materials);
 
-              const progress = statusMap[material.status] || 50;
-              const phase = progress === 100 ? 4 : Math.floor(progress / 25);
+            // Update processing status for existing materials
+            const newProcessingStatus = { ...processingStatus };
+            data.session.materials.forEach((material) => {
+              if (material.status) {
+                // Map statuses to progress values
+                const statusMap = {
+                  "Not Found": 50,
+                  processing: 75,
+                  "Converting to text": 80,
+                  "Skimming Through": 85,
+                  Summarizing: 95,
+                  Ready: 100,
+                  ready: 100,
+                  error: 0,
+                  unsupported: 0,
+                };
 
-              newProcessingStatus[material.id] = {
-                progress,
-                statusText: material.status,
-                phase,
-                error: material.status === "error" ? "Processing failed" : null,
-                type: "file", // Default type
-              };
-            }
-          });
+                const progress = statusMap[material.status] || 50;
+                const phase = progress === 100 ? 4 : Math.floor(progress / 25);
 
-          setProcessingStatus(newProcessingStatus);
+                newProcessingStatus[material.id] = {
+                  progress,
+                  statusText: material.status,
+                  phase,
+                  error:
+                    material.status === "error" ? "Processing failed" : null,
+                  type: "file", // Default type
+                };
+              }
+            });
+
+            setProcessingStatus(newProcessingStatus);
+          }
         }
       } catch (error) {
-        console.error("Error fetching materials:", error);
+        console.error("Error fetching session data:", error);
         setLoadError(error.message);
       } finally {
         setIsLoadingMaterials(false);
       }
     };
 
-    fetchExistingMaterials();
+    fetchSessionData();
   }, [sessionId]);
+
+  // Effect to monitor processing status and refresh existing materials when items become ready
+  useEffect(() => {
+    const readyMaterials = Object.entries(processingStatus).filter(
+      ([id, status]) => status.statusText === "Ready" && status.progress === 100
+    );
+
+    if (readyMaterials.length > 0 && isUploading) {
+      // Some materials have become ready, refresh the materials list
+      const fetchUpdatedMaterials = async () => {
+        try {
+          const response = await fetch(
+            `/api/study_session?sessionId=${sessionId}`
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch updated materials: ${response.status}`
+            );
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.session && data.session.materials) {
+            setExistingMaterials(data.session.materials);
+
+            // Remove processed files from the files state
+            const readyMaterialIds = readyMaterials.map(([id]) => id);
+            setFiles((prevFiles) =>
+              prevFiles.filter((file) => !readyMaterialIds.includes(file.id))
+            );
+          }
+        } catch (error) {
+          console.error("Error refreshing materials after processing:", error);
+        }
+      };
+
+      fetchUpdatedMaterials();
+    }
+  }, [processingStatus, isUploading, sessionId]);
 
   // Utility functions
   const getRandomBubbleColor = () => {
@@ -1236,13 +1351,13 @@ const UploadMaterialsPage = () => {
       if (file.type !== "application/pdf") {
         return false;
       }
-      
+
       // Check file size (30MB = 30 * 1024 * 1024 bytes)
       if (file.size > 30 * 1024 * 1024) {
         alert(`File ${file.name} exceeds the 30MB size limit.`);
         return false;
       }
-      
+
       return true;
     });
     const newFiles = validFiles.map((file) => ({
@@ -1261,20 +1376,22 @@ const UploadMaterialsPage = () => {
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     // Filter for PDF files under 30MB
-    const validFiles = selectedFiles.filter(file => {
+    const validFiles = selectedFiles.filter((file) => {
       if (file.type !== "application/pdf") {
-        alert(`File ${file.name} is not a PDF file. Only PDF files are currently supported.`);
+        alert(
+          `File ${file.name} is not a PDF file. Only PDF files are currently supported.`
+        );
         return false;
       }
-      
+
       if (file.size > 30 * 1024 * 1024) {
         alert(`File ${file.name} exceeds the 30MB size limit.`);
         return false;
       }
-      
+
       return true;
     });
-    
+
     // For each file, simply store it in state along with an "uploaded" flag.
     const newFiles = validFiles.map((file) => ({
       id: Math.random().toString(36).substring(7),
@@ -1406,6 +1523,10 @@ const UploadMaterialsPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col p-6 md:p-10">
       <div className="max-w-4xl w-full mx-auto">
         <Header />
+        <SessionHeader
+          sessionDetails={sessionDetails}
+          isLoading={isLoadingMaterials}
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FileUpload
             handleDrop={handleDrop}
@@ -1414,12 +1535,15 @@ const UploadMaterialsPage = () => {
           />
           <Card className="bg-white shadow-lg border rounded-lg overflow-hidden">
             <CardContent className="p-6">
-              <h2 className="text-xl font-medium text-gray-800 mb-4">Link Upload</h2>
+              <h2 className="text-xl font-medium text-gray-800 mb-4">
+                Link Upload
+              </h2>
               <div className="text-center p-6 bg-gray-50 rounded-lg border border-dashed">
                 <Link className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-700">Link Upload Disabled</p>
                 <p className="text-sm text-gray-500 mt-2">
-                  This feature is temporarily unavailable. Please upload PDF files only.
+                  This feature is temporarily unavailable. Please upload PDF
+                  files only.
                 </p>
               </div>
               <div className="mt-4 text-xs text-center text-gray-500">
@@ -1428,7 +1552,7 @@ const UploadMaterialsPage = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         {(files.length > 0 || links.length > 0) && (
           <PreviewSection
             files={files}
@@ -1443,14 +1567,8 @@ const UploadMaterialsPage = () => {
             getFileIcon={getFileIcon}
           />
         )}
-        <ExistingMaterialsSection
-          existingMaterials={existingMaterials}
-          isLoadingMaterials={isLoadingMaterials}
-          loadError={loadError}
-          processingStatus={processingStatus}
-          getFileIcon={getFileIcon}
-          formatFileSize={formatFileSize}
-        />
+
+        {/* Moved Ingest button above Existing Materials section */}
         {(files.length > 0 || links.length > 0) && (
           <IngestButton
             files={files}
@@ -1459,6 +1577,16 @@ const UploadMaterialsPage = () => {
             handleIngest={handleIngest}
           />
         )}
+
+        <ExistingMaterialsSection
+          existingMaterials={existingMaterials}
+          isLoadingMaterials={isLoadingMaterials}
+          loadError={loadError}
+          processingStatus={processingStatus}
+          getFileIcon={getFileIcon}
+          formatFileSize={formatFileSize}
+        />
+
         {isUploading &&
           Object.values(processingStatus).every(
             (status) =>
