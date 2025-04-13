@@ -32,10 +32,12 @@ import {
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 
-// Upload a PDF file using Vercel Blob – note that this returns a blob object containing an "id" for polling.
-async function uploadPdfFile(file, setProcessingStatus, sessionId) {
+// Upload file (PDF or audio) using Vercel Blob - this returns a blob object containing an "id" for polling
+async function uploadFile(file, setProcessingStatus, sessionId) {
   // Here we set an initial temporary status
   const tempMaterialId = Math.random().toString(36).substring(7);
+  const isAudio = file.type.startsWith("audio/");
+
   setProcessingStatus((prev) => ({
     ...prev,
     [tempMaterialId]: {
@@ -43,6 +45,7 @@ async function uploadPdfFile(file, setProcessingStatus, sessionId) {
       statusText: "Uploading",
       phase: 0,
       error: null,
+      type: isAudio ? "audio" : "file",
     },
   }));
 
@@ -71,7 +74,7 @@ async function uploadPdfFile(file, setProcessingStatus, sessionId) {
       [tempMaterialId]: {
         ...prev[tempMaterialId],
         progress: 50,
-        statusText: "Processing",
+        statusText: isAudio ? "Transcribing audio" : "Processing",
         phase: 1,
       },
     }));
@@ -358,11 +361,26 @@ const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
         onDrop={handleDrop}
       >
         <div className="flex flex-col items-center">
-          <File className="h-8 w-8 text-gray-600 mb-2" />
+          <div className="flex items-center space-x-2 mb-2">
+            <FileText className="h-8 w-8 text-gray-600" />
+            <FileAudio className="h-8 w-8 text-blue-600" />
+          </div>
           <p className="text-gray-700">Drop your files here</p>
-          <p className="text-sm text-gray-500 mb-4">
-            Supported: PDF files only (max 30MB)
-          </p>
+          <p className="text-sm text-gray-500 mb-2">Supported formats:</p>
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <Badge variant="outline" className="bg-gray-100">
+              PDF
+            </Badge>
+            <Badge variant="outline" className="bg-blue-100">
+              MP3
+            </Badge>
+            <Badge variant="outline" className="bg-blue-100">
+              WAV
+            </Badge>
+            <Badge variant="outline" className="bg-blue-100">
+              M4A
+            </Badge>
+          </div>
           <Button
             onClick={() => document.getElementById(fileInputId).click()}
             className="mt-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white"
@@ -374,7 +392,7 @@ const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
             type="file"
             className="hidden"
             multiple
-            accept=".pdf,application/pdf"
+            accept=".pdf,application/pdf,.mp3,audio/mpeg,.wav,audio/wav,.m4a,audio/x-m4a,audio/m4a"
             onChange={handleFileChange}
           />
         </div>
@@ -442,6 +460,10 @@ const FilePreview = ({
     error: null,
   };
 
+  // Determine if this is an audio file
+  const isAudio = file.type.startsWith("audio/");
+  const fileType = isAudio ? "audio" : "file";
+
   return (
     <div
       className="p-4 border rounded transition hover:shadow-md"
@@ -459,8 +481,13 @@ const FilePreview = ({
         <div className="flex-1">
           <div className="flex justify-between mb-2">
             <span className="font-medium text-gray-800">{file.title}</span>
-            <Badge variant="outline" className="text-xs">
-              {file.subject || "No subject"}
+            <Badge
+              variant="outline"
+              className={`text-xs ${
+                isAudio ? "bg-blue-100 text-blue-800" : ""
+              }`}
+            >
+              {isAudio ? "Audio" : file.subject || "No subject"}
             </Badge>
           </div>
           {isUploading ? (
@@ -472,7 +499,7 @@ const FilePreview = ({
                   <div className="flex items-center justify-between text-sm text-gray-600 mt-2 mb-1">
                     <span>
                       {status.statusText ||
-                        processingPhases.file[status.phase || 0]}
+                        processingPhases[fileType][status.phase || 0]}
                     </span>
                     <span>{status.progress}%</span>
                   </div>
@@ -1308,14 +1335,32 @@ const UploadMaterialsPage = () => {
 
   const getFileIcon = (type) => {
     const fileTypeIcons = {
+      // PDF file types
       "application/pdf": <FileText className="h-8 w-8 text-gray-600" />,
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         <FileText className="h-8 w-8 text-gray-600" />,
+
+      // Audio file types
+      "audio/mpeg": <FileAudio className="h-8 w-8 text-blue-600" />,
+      "audio/mp3": <FileAudio className="h-8 w-8 text-blue-600" />,
+      "audio/wav": <FileAudio className="h-8 w-8 text-blue-600" />,
+      "audio/x-m4a": <FileAudio className="h-8 w-8 text-blue-600" />,
+      "audio/m4a": <FileAudio className="h-8 w-8 text-blue-600" />,
+      "audio/mp4": <FileAudio className="h-8 w-8 text-blue-600" />,
+      "audio/x-wav": <FileAudio className="h-8 w-8 text-blue-600" />,
+
+      // Video file types
       "video/mp4": <FileVideo className="h-8 w-8 text-gray-600" />,
-      "audio/mpeg": <FileAudio className="h-8 w-8 text-gray-600" />,
-      "audio/wav": <FileAudio className="h-8 w-8 text-gray-600" />,
+
+      // Default file icon
       default: <File className="h-8 w-8 text-gray-600" />,
     };
+
+    // Special handling for audio types that might not be explicitly listed
+    if (type.startsWith("audio/")) {
+      return <FileAudio className="h-8 w-8 text-blue-600" />;
+    }
+
     return fileTypeIcons[type] || fileTypeIcons.default;
   };
 
@@ -1340,6 +1385,13 @@ const UploadMaterialsPage = () => {
       "Finalizing",
       "Complete",
     ],
+    audio: [
+      "Checking audio",
+      "Uploading",
+      "Transcribing",
+      "Analyzing",
+      "Complete",
+    ],
   };
 
   // Handlers for file uploads
@@ -1347,8 +1399,14 @@ const UploadMaterialsPage = () => {
     e.preventDefault();
     const droppedFiles = Array.from(e.dataTransfer.files);
     const validFiles = droppedFiles.filter((file) => {
-      // Check if file is PDF
-      if (file.type !== "application/pdf") {
+      // Check if file is PDF or audio
+      const isPdf = file.type === "application/pdf";
+      const isAudio = file.type.startsWith("audio/");
+
+      if (!isPdf && !isAudio) {
+        alert(
+          `File ${file.name} is not supported. Only PDF and audio files (MP3, WAV, M4A) are currently supported.`
+        );
         return false;
       }
 
@@ -1375,15 +1433,20 @@ const UploadMaterialsPage = () => {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    // Filter for PDF files under 30MB
+    // Filter for PDF and audio files under 30MB
     const validFiles = selectedFiles.filter((file) => {
-      if (file.type !== "application/pdf") {
+      // Check if file is PDF or audio
+      const isPdf = file.type === "application/pdf";
+      const isAudio = file.type.startsWith("audio/");
+
+      if (!isPdf && !isAudio) {
         alert(
-          `File ${file.name} is not a PDF file. Only PDF files are currently supported.`
+          `File ${file.name} is not supported. Only PDF and audio files (MP3, WAV, M4A) are currently supported.`
         );
         return false;
       }
 
+      // Check file size (30MB = 30 * 1024 * 1024 bytes)
       if (file.size > 30 * 1024 * 1024) {
         alert(`File ${file.name} exceeds the 30MB size limit.`);
         return false;
@@ -1422,10 +1485,12 @@ const UploadMaterialsPage = () => {
     // Initialize processingStatus for each file (and links if needed)
     const initialStatus = {};
     files.forEach((file) => {
+      // Check if this is an audio file and set the appropriate type
+      const isAudio = file.type.startsWith("audio/");
       initialStatus[file.id] = {
         phase: 0,
         progress: 0,
-        type: "file",
+        type: isAudio ? "audio" : "file",
         statusText: "",
       };
     });
@@ -1451,11 +1516,11 @@ const UploadMaterialsPage = () => {
 
     console.log("Starting upload with session ID:", sessionId);
 
-    // For each PDF file that hasn't been uploaded, perform the Vercel Blob upload
+    // For each file that hasn't been uploaded, perform the Vercel Blob upload
     for (const fileObj of files) {
-      if (fileObj.type === "application/pdf" && !fileObj.uploaded) {
+      if (!fileObj.uploaded) {
         try {
-          const materialId = await uploadPdfFile(
+          const materialId = await uploadFile(
             fileObj.file,
             setProcessingStatus,
             sessionId

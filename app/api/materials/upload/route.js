@@ -24,7 +24,16 @@ export async function POST(request) {
       request,
       onBeforeGenerateToken: async (pathname) => {
         return {
-          allowedContentTypes: ["application/pdf"], // Allow PDFs for this upload.
+          allowedContentTypes: [
+            "application/pdf", // Allow PDFs
+            "audio/mpeg",
+            "audio/mp3",
+            "audio/wav", // Common audio formats
+            "audio/x-m4a",
+            "audio/m4a",
+            "audio/mp4",
+            "audio/x-wav", // Additional audio formats
+          ],
           tokenPayload: JSON.stringify({ sessionId }), // Pass sessionId in token payload
         };
       },
@@ -39,6 +48,9 @@ export async function POST(request) {
           // Extract file information from the blob
           const { pathname, size, contentType, url } = blob;
           const type = contentType;
+
+          // Determine if this is an audio file
+          const isAudio = type.startsWith("audio/");
 
           // Create the material in the database with initial status
           const material = await prisma.material.create({
@@ -67,7 +79,9 @@ export async function POST(request) {
             success: true,
             materialId: material.id,
             url: url, // Return the URL too for reference
-            message: "Material created and processing started",
+            message: `${
+              isAudio ? "Audio" : "PDF"
+            } material created and processing started`,
           };
         } catch (dbError) {
           console.error("Failed to save material to database:", dbError);

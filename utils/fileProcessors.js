@@ -15,9 +15,14 @@ const openai = new OpenAI({
 export function getFileProcessor(fileType) {
   const processors = {
     "application/pdf": new PdfProcessor(),
-    // Add more processors as needed:
-    // 'audio/mpeg': new AudioProcessor(),
-    // 'video/mp4': new VideoProcessor(),
+    // Add audio processors
+    "audio/mpeg": new AudioProcessor(),
+    "audio/mp3": new AudioProcessor(),
+    "audio/wav": new AudioProcessor(),
+    "audio/x-m4a": new AudioProcessor(),
+    "audio/m4a": new AudioProcessor(),
+    "audio/mp4": new AudioProcessor(),
+    "audio/x-wav": new AudioProcessor(),
   };
 
   return processors[fileType] || new DefaultProcessor();
@@ -213,6 +218,151 @@ class PdfProcessor extends FileProcessor {
       console.error("Error using OpenAI API:", error);
       throw new Error(
         `Failed to process PDF using OpenAI API: ${error.message}`
+      );
+    }
+  }
+}
+
+/**
+ * Audio Processor using OpenAI Whisper API
+ */
+class AudioProcessor extends FileProcessor {
+  async process(fileUrl, { materialId, prisma, updateProgress }) {
+    try {
+      // Log processing start for tracking
+      console.log(
+        `Starting audio processing for material ID: ${materialId}, URL: ${fileUrl}`
+      );
+
+      // Update status to processing
+      await this.updateStatus(materialId, "processing", prisma);
+
+      if (updateProgress) updateProgress(20, "Downloading audio file...");
+
+      // Download the audio file
+      const audioBuffer = await this.downloadFile(fileUrl);
+      console.log(
+        `Audio downloaded successfully for ${materialId}, size: ${audioBuffer.length} bytes`
+      );
+
+      if (updateProgress)
+        updateProgress(
+          40,
+          "Sending audio to OpenAI Whisper for transcription..."
+        );
+
+      // Update status to reflect the current step
+      await this.updateStatus(materialId, "Transcribing audio", prisma);
+
+      // Transcribe audio and generate description in a single API call
+      const { transcribedText, description } = await this.transcribeWithWhisper(
+        audioBuffer
+      );
+
+      console.log(
+        `Audio transcribed successfully for ${materialId}, length: ${transcribedText.length} chars`
+      );
+      console.log(`Description generated for ${materialId}: ${description}`);
+
+      if (updateProgress) updateProgress(80, "Storing transcribed content...");
+
+      // Save the transcribed text and description to the database
+      await prisma.material.update({
+        where: { id: materialId },
+        data: {
+          rawContent: transcribedText,
+          description: description,
+          status: "Ready", // Use consistent status naming
+        },
+      });
+      console.log(`Processing completed for ${materialId}`);
+
+      if (updateProgress) updateProgress(100, "Processing complete");
+
+      return {
+        success: true,
+        text: transcribedText,
+        description: description,
+      };
+    } catch (error) {
+      console.error(`Audio processing error for ${materialId}:`, error);
+
+      // Update status to error
+      try {
+        await this.updateStatus(materialId, "error", prisma);
+      } catch (statusError) {
+        console.error(
+          `Failed to update error status for ${materialId}:`,
+          statusError
+        );
+      }
+
+      if (updateProgress) updateProgress(100, "Error processing file");
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Transcribe audio with OpenAI Whisper API and generate description
+   */
+  async transcribeWithWhisper(audioBuffer) {
+    try {
+      // Create a FormData object with the audio file for the OpenAI API
+      // First, we need to create a temporary file for the audio buffer
+      const formData = new FormData();
+      const audioBlob = new Blob([audioBuffer], { type: "audio/mpeg" });
+      formData.append("file", audioBlob, "audio.mp3");
+      formData.append("model", "whisper-1");
+      formData.append("response_format", "verbose_json");
+
+      // Call OpenAI Whisper API to transcribe audio
+      const transcriptionResponse = await openai.audio.transcriptions.create({
+        file: new File([audioBuffer], "audio.mp3", { type: "audio/mpeg" }),
+        model: "whisper-1",
+        response_format: "verbose_json",
+      });
+
+      const transcribedText = transcriptionResponse.text || "";
+
+      // Generate a description from the transcribed text
+      let description = "Audio transcription";
+
+      // Only attempt to generate a description if we have enough transcribed text
+      if (transcribedText && transcribedText.length > 50) {
+        try {
+          // Use GPT to generate a brief description of the audio content
+          const descriptionResponse = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Generate a very concise description (maximum 2 sentences) of what this audio transcription is about.",
+              },
+              {
+                role: "user",
+                content: transcribedText.substring(0, 1000), // Use first 1000 chars to generate description
+              },
+            ],
+            max_tokens: 100,
+          });
+
+          description = descriptionResponse.choices[0].message.content.trim();
+        } catch (descError) {
+          console.error("Error generating description:", descError);
+          // Fall back to default description
+        }
+      }
+
+      return { transcribedText, description };
+    } catch (error) {
+      console.error("Error using OpenAI Whisper API:", error);
+      throw new Error(
+        `Failed to transcribe audio using Whisper API: ${error.message}`
       );
     }
   }
