@@ -382,8 +382,8 @@ const QuizCreationPage = () => {
                         size="sm"
                         className={
                           quizParams.numQuestions === value
-                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                            : "border-gray-200"
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white no-loading"
+                            : "border-gray-200 no-loading"
                         }
                         onClick={() =>
                           handleQuizParamChange("numQuestions", value)
@@ -417,8 +417,8 @@ const QuizCreationPage = () => {
                         size="sm"
                         className={
                           quizParams.difficulty === diff.value
-                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                            : "border-gray-200"
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white no-loading"
+                            : "border-gray-200 no-loading"
                         }
                         onClick={() =>
                           handleQuizParamChange("difficulty", diff.value)
@@ -467,8 +467,8 @@ const QuizCreationPage = () => {
                         size="sm"
                         className={
                           quizParams.questionType === type.value
-                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                            : "border-gray-200"
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white no-loading"
+                            : "border-gray-200 no-loading"
                         }
                         onClick={() =>
                           handleQuizParamChange("questionType", type.value)
@@ -497,8 +497,8 @@ const QuizCreationPage = () => {
                         size="sm"
                         className={
                           quizParams.timeLimit === value
-                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                            : "border-gray-200"
+                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white no-loading"
+                            : "border-gray-200 no-loading"
                         }
                         onClick={() =>
                           handleQuizParamChange("timeLimit", value)
@@ -531,7 +531,7 @@ const QuizCreationPage = () => {
                   </Button>
                 ) : (
                   <Button
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white no-loading"
                     onClick={handleGenerateQuiz}
                     disabled={generating}
                   >

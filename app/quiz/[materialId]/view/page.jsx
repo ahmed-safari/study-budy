@@ -535,6 +535,7 @@ const QuizPage = () => {
               <CardFooter className="px-8 pb-8 flex justify-center gap-4">
                 <Button
                   variant="outline"
+                  className={"no-loading"}
                   onClick={() => {
                     setSelectedOptions({});
                     setCurrentQuestionIndex(0);
@@ -678,8 +679,8 @@ const QuizPage = () => {
                     disabled={currentQuestionIndex === 0}
                     className={
                       currentQuestionIndex === 0
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
+                        ? "opacity-50 cursor-not-allowed no-loading"
+                        : "no-loading"
                     }
                   >
                     <ChevronLeft className="mr-2 h-4 w-4" />
@@ -704,7 +705,7 @@ const QuizPage = () => {
                   {currentQuestionIndex < quiz.questions.length - 1 ? (
                     <Button
                       onClick={handleNextQuestion}
-                      className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white no-loading"
                     >
                       Next
                       <ChevronRight className="ml-2 h-4 w-4" />
@@ -712,7 +713,7 @@ const QuizPage = () => {
                   ) : (
                     <Button
                       onClick={handleSubmitQuiz}
-                      className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white transition-all ${
+                      className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white transition-all no-loading ${
                         !allQuestionsAnswered() ? "opacity-80" : ""
                       }`}
                     >
@@ -749,8 +750,6 @@ const QuizPage = () => {
             </div>
           </div>
         )}
-
-      
       </div>
     </div>
   );

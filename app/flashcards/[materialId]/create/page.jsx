@@ -394,8 +394,8 @@ const FlashcardCreationPage = () => {
                         size="sm"
                         className={
                           flashcardParams.numFlashcards === value
-                            ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white"
-                            : "border-gray-200"
+                            ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white no-loading"
+                            : "border-gray-200 no-loading"
                         }
                         onClick={() =>
                           handleFlashcardParamChange("numFlashcards", value)
@@ -428,7 +428,7 @@ const FlashcardCreationPage = () => {
                   </Button>
                 ) : (
                   <Button
-                    className="bg-gradient-to-r from-amber-600 to-orange-600 text-white"
+                    className="bg-gradient-to-r from-amber-600 to-orange-600 text-white no-loading"
                     onClick={handleGenerateFlashcards}
                     disabled={generating}
                   >

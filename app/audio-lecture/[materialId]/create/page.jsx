@@ -533,7 +533,7 @@ const AudioLectureCreatePage = () => {
                 </Button>
                 <Button
                   type="submit"
-                  className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 text-white"
+                  className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-emerald-600 text-white no-loading"
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   Generate Audio Lecture

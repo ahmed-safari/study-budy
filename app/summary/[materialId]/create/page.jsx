@@ -372,7 +372,7 @@ const SummaryCreationPage = () => {
                   </Button>
                 ) : (
                   <Button
-                    className="bg-gradient-to-r from-rose-600 to-pink-600 text-white"
+                    className="bg-gradient-to-r from-rose-600 to-pink-600 text-white no-loading"
                     onClick={handleGenerateSummary}
                     disabled={generating}
                   >

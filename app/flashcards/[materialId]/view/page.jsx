@@ -349,7 +349,7 @@ const FlashcardsPage = () => {
         <div className="flex justify-center mb-6">
           <Button
             variant={mastered.has(currentCard.id) ? "default" : "outline"}
-            className={`${
+            className={`no-loading ${
               mastered.has(currentCard.id)
                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                 : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
@@ -377,7 +377,9 @@ const FlashcardsPage = () => {
             onClick={handlePreviousCard}
             disabled={currentCardIndex === 0}
             className={
-              currentCardIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
+              currentCardIndex === 0
+                ? "opacity-50 cursor-not-allowed no-loading"
+                : "no-loading"
             }
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
@@ -388,7 +390,7 @@ const FlashcardsPage = () => {
             <Button
               variant="outline"
               onClick={handleShuffle}
-              className="flex items-center gap-2 text-gray-700"
+              className="flex items-center gap-2 text-gray-700 no-loading"
             >
               <Shuffle className="h-4 w-4" />
               {shuffled ? "Unshuffle" : "Shuffle"}
@@ -397,7 +399,7 @@ const FlashcardsPage = () => {
             <Button
               variant="outline"
               onClick={handleRestart}
-              className="flex items-center gap-2 text-gray-700"
+              className="flex items-center gap-2 text-gray-700 no-loading"
             >
               <RotateCw className="h-4 w-4" />
               Restart
@@ -407,7 +409,7 @@ const FlashcardsPage = () => {
           {currentCardIndex >= deck.flashcards.length - 1 ? (
             <Button
               onClick={() => router.push(`/flashcards/${materialId}/list`)}
-              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white"
+              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white no-loading"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               Finish
@@ -415,7 +417,7 @@ const FlashcardsPage = () => {
           ) : (
             <Button
               onClick={handleNextCard}
-              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white"
+              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white no-loading"
             >
               Next
               <ChevronRight className="ml-2 h-4 w-4" />

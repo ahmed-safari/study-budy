@@ -272,6 +272,7 @@ const SummaryViewPage = () => {
               <Button
                 variant="outline"
                 size="sm"
+                className={"no-loading"}
                 onClick={() => navigator.clipboard.writeText(shareUrl)}
               >
                 <LinkIcon className="h-4 w-4 mr-2" />
@@ -400,7 +401,7 @@ const SummaryViewPage = () => {
           <Button
             variant="outline"
             onClick={handleCopyToClipboard}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 no-loading"
           >
             <Copy className="h-4 w-4" />
             Copy
@@ -408,14 +409,14 @@ const SummaryViewPage = () => {
           <Button
             variant="outline"
             onClick={handlePrint}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 no-loading"
           >
             <Printer className="h-4 w-4" />
             Print
           </Button>
           <Button
             variant="outline"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 no-loading"
             onClick={handleShare}
           >
             <Share2 className="h-4 w-4" />
@@ -430,7 +431,7 @@ const SummaryViewPage = () => {
           </Button>
           <Button
             variant="outline"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 no-loading"
             onClick={handleDownload}
           >
             <Download className="h-4 w-4" />
