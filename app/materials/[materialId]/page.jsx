@@ -71,6 +71,7 @@ const MaterialDetailsPage = () => {
             rawContent: data.rawContent,
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
+            studySessionId: data.studySessionId, // Add session ID
           });
         } else {
           throw new Error(data.error || "Unknown error fetching material");
@@ -319,7 +320,15 @@ const MaterialDetailsPage = () => {
         {/* Back button */}
         <Button
           variant="ghost"
-          onClick={() => router.back()}
+          onClick={() => {
+            // If material has a studySessionId, navigate to the upload materials page for that session
+            if (material && material.studySessionId) {
+              router.push(`/upload_materials/${material.studySessionId}`);
+            } else {
+              // Fall back to going back to all sessions
+              router.push("/sessions");
+            }
+          }}
           className="mb-6 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

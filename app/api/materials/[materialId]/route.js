@@ -32,6 +32,7 @@ export async function GET(request, { params }) {
       rawContent: material.rawContent, // Include the extracted text
       createdAt: material.createdAt,
       updatedAt: material.updatedAt,
+      studySessionId: material.studySessionId, // Include the session ID
     });
   } catch (error) {
     console.error("Error fetching material status:", error);
