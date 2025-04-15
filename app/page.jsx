@@ -132,7 +132,7 @@ const LandingPage = () => {
                       </p>
                     </div>
                     <Button
-                      className="mt-4 text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 group-hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                      className="mt-4 text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 group-hover:scale-105 transition-all duration-300 flex items-center justify-center no-loading"
                       onClick={() => setIsCreateModalOpen(true)}
                     >
                       Get Started
@@ -370,7 +370,7 @@ const LandingPage = () => {
               variant="ghost"
               size="icon"
               onClick={() => setIsCreateModalOpen(false)}
-              className="text-white hover:bg-white/20 rounded-full h-8 w-8"
+              className="text-white hover:bg-white/20 rounded-full h-8 w-8 no-loading"
               disabled={isSubmitting}
             >
               <X className="h-5 w-5" />
@@ -460,7 +460,7 @@ const LandingPage = () => {
 
           <AlertDialogFooter className="p-6 pt-0">
             <AlertDialogCancel
-              className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-200 cancel-button no-loading"
+              className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-200 no-loading"
               disabled={isSubmitting}
               onClick={() => {
                 // Explicitly close the modal without setting loading state

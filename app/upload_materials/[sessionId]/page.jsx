@@ -383,7 +383,7 @@ const FileUpload = ({ handleDrop, handleFileChange, fileInputId }) => (
           </div>
           <Button
             onClick={() => document.getElementById(fileInputId).click()}
-            className="mt-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+            className="mt-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white no-loading"
           >
             Browse Files
           </Button>
