@@ -460,13 +460,17 @@ const LandingPage = () => {
 
           <AlertDialogFooter className="p-6 pt-0">
             <AlertDialogCancel
-              className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-200"
+              className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-200 cancel-button no-loading"
               disabled={isSubmitting}
+              onClick={() => {
+                // Explicitly close the modal without setting loading state
+                setIsCreateModalOpen(false);
+              }}
             >
               Cancel
             </AlertDialogCancel>
             <Button
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 font-semibold px-6 min-w-[180px]"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 font-semibold px-6 min-w-[180px] navigation-button"
               onClick={handleCreateSession}
               disabled={isSubmitting}
             >
