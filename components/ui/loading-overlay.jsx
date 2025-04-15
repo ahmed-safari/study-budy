@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export function LoadingOverlay() {
+// Wrapper component that uses useSearchParams
+const LoadingOverlayContent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -42,11 +43,20 @@ export function LoadingOverlay() {
   if (!isLoading) return null;
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        <p className="text-lg font-medium">Loading...</p>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 shadow-xl flex flex-col items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-indigo-600 border-r-indigo-600 border-b-indigo-200 border-l-indigo-200 mb-3"></div>
+        <h3 className="text-lg font-medium text-gray-900">Loading...</h3>
+        <p className="text-gray-500 text-sm mt-1">Please wait</p>
       </div>
     </div>
+  );
+};
+
+export function LoadingOverlay() {
+  return (
+    <Suspense fallback={null}>
+      <LoadingOverlayContent />
+    </Suspense>
   );
 }

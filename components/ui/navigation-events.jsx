@@ -1,19 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export function NavigationEvents({ setIsLoading }) {
+// Wrapper component that uses useSearchParams
+const NavigationEventsContent = ({ setIsLoading }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const handleRouteChangeStart = () => {
       setIsLoading(true);
-    };
-
-    const handleRouteChangeComplete = () => {
-      setIsLoading(false);
     };
 
     window.addEventListener("beforeunload", handleRouteChangeStart);
@@ -69,4 +66,12 @@ export function NavigationEvents({ setIsLoading }) {
   }, [pathname, searchParams, setIsLoading]);
 
   return null;
+};
+
+export function NavigationEvents({ setIsLoading }) {
+  return (
+    <Suspense fallback={null}>
+      <NavigationEventsContent setIsLoading={setIsLoading} />
+    </Suspense>
+  );
 }
