@@ -44,6 +44,7 @@ const MaterialDetailsPage = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [loadingQuizzes, setLoadingQuizzes] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
   const params = useParams();
   const router = useRouter();
   const materialId = params.materialId;
@@ -397,32 +398,65 @@ const MaterialDetailsPage = () => {
 
         {/* Material content preview */}
         {material.rawContent && (
-          <Card className="mb-8 bg-white shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-indigo-600" />
-                Content Preview
-              </CardTitle>
-              <CardDescription>
-                Preview of the extracted content from this material
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-80 overflow-y-auto">
-                <pre className="text-sm whitespace-pre-wrap text-gray-700 font-mono">
-                  {material.rawContent.length > 1000
-                    ? `${material.rawContent.substring(0, 1000)}...`
-                    : material.rawContent}
-                </pre>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end">
-              <Button variant="outline" className="text-sm">
-                <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                View Full Content
-              </Button>
-            </CardFooter>
-          </Card>
+          <div
+            className="relative z-50"
+            onClick={(e) => {
+              // Completely stop propagation and prevent default at the container level
+              e.stopPropagation();
+              e.preventDefault();
+              e.nativeEvent.stopImmediatePropagation();
+            }}
+          >
+            <Card className="mb-8 bg-white shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-indigo-600" />
+                  Content Preview
+                </CardTitle>
+                <CardDescription>
+                  Preview of the extracted content from this material
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-80 overflow-y-auto">
+                  <pre className="text-sm whitespace-pre-wrap text-gray-700 font-mono">
+                    {showFullContent
+                      ? material.rawContent
+                      : material.rawContent.length > 1000
+                      ? `${material.rawContent.substring(0, 1000)}...`
+                      : material.rawContent}
+                  </pre>
+                </div>
+              </CardContent>
+              <CardFooter className="justify-end">
+                <div
+                  onClick={(e) => {
+                    // Additional click handler for the button container
+                    e.stopPropagation();
+                    e.preventDefault();
+                    e.nativeEvent.stopImmediatePropagation();
+                  }}
+                >
+                  <Button
+                    variant="outline"
+                    className="text-sm no-loading"
+                    onClick={(event) => {
+                      // Triple protection: stop propagation, prevent default, and stop immediate propagation
+                      event.stopPropagation();
+                      event.preventDefault();
+                      event.nativeEvent.stopImmediatePropagation();
+                      setShowFullContent(!showFullContent);
+                    }}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                    {showFullContent
+                      ? "Hide Full Content"
+                      : "View Full Content"}
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
         )}
 
         {/* Material status */}
@@ -477,46 +511,47 @@ const MaterialDetailsPage = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {actionCards.map((action, index) => (
-            <div
-              key={index}
-              className={`cursor-pointer ${
-                action.disabled ? "" : "hover:scale-[1.02]"
-              }`}
-              onClick={() => !action.disabled && router.push(action.path)}
-            >
-              <Card
-                className={`relative overflow-hidden transition-all group hover:shadow-lg ${
-                  action.disabled ? "opacity-60" : ""
+            <div key={index} className="h-full">
+              <Button
+                variant="ghost"
+                className={`p-0 h-full w-full ${
+                  action.disabled ? "opacity-60 cursor-not-allowed" : ""
                 }`}
+                onClick={() => !action.disabled && router.push(action.path)}
+                disabled={action.disabled}
               >
-                <div
-                  className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-5 transition-opacity`}
-                />
-                <CardContent className="p-6 flex flex-col h-full">
+                <Card className="w-full h-full">
                   <div
-                    className={`p-4 rounded-full bg-gradient-to-br ${action.color} self-start mb-4`}
-                  >
-                    {action.icon}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
-                    {action.title}
-                  </h3>
-                  <p className="text-gray-600 mb-6 flex-grow">
-                    {action.description}
-                  </p>
-                  {action.disabled ? (
-                    <div className="w-full py-2 px-4 text-center bg-gray-200 opacity-50 rounded-md text-gray-700">
-                      Currently Unavailable
-                    </div>
-                  ) : (
+                    className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-5 transition-opacity`}
+                  />
+                  <CardContent className="p-6 flex flex-col h-full">
                     <div
-                      className={`w-full py-2 px-4 text-center bg-gradient-to-r ${action.color} text-white rounded-md hover:shadow-md`}
+                      className={`p-4 rounded-full bg-gradient-to-br ${action.color} self-start mb-4`}
                     >
-                      {action.title}
+                      {action.icon}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      {action.title}
+                    </h3>
+                    <p className="text-gray-600 mb-6 whitespace-normal">
+                      {action.description}
+                    </p>
+                    <div className="mt-auto pt-2">
+                      {action.disabled ? (
+                        <div className="w-full py-2 px-4 text-center bg-gray-200 opacity-50 rounded-md text-gray-700">
+                          Currently Unavailable
+                        </div>
+                      ) : (
+                        <div
+                          className={`w-full py-2 px-4 text-center bg-gradient-to-r ${action.color} text-white rounded-md hover:shadow-md`}
+                        >
+                          {action.title}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Button>
             </div>
           ))}
         </div>
@@ -525,7 +560,7 @@ const MaterialDetailsPage = () => {
         <div className="flex flex-wrap justify-center gap-4">
           <Button
             variant="outline"
-            className="border-gray-300"
+            className="border-gray-300 no-loading"
             onClick={handleShare}
           >
             {showShareTooltip ? (
@@ -542,7 +577,7 @@ const MaterialDetailsPage = () => {
           </Button>
           <Button
             variant="outline"
-            className="border-gray-300"
+            className="border-gray-300 no-loading"
             onClick={handleDownload}
             disabled={!material.rawContent}
           >
