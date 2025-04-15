@@ -3,7 +3,7 @@ import { prisma } from "@/utils/database";
 
 export async function GET(request, { params }) {
   try {
-    const materialId = params.materialId;
+    const { materialId } = await params;
 
     if (!materialId) {
       return NextResponse.json(
