@@ -246,13 +246,13 @@ const MaterialDetailsPage = () => {
       path: `/mindmap/${materialId}`,
     },
     {
-      title: "Audio Lecture",
+      title: "Audio Lectures",
       description:
-        "Listen to AI-generated audio explaining the material like a teacher",
+        "Listen to AI-generated audio lectures explaining the material",
       icon: <FileAudio className="h-8 w-8 text-white" />,
       color: "from-teal-500 to-emerald-600",
-      disabled: true,
-      path: `/audio-lecture/${materialId}`,
+      disabled: material?.status !== "Ready" && material?.status !== "ready",
+      path: `/audio-lecture/${materialId}/list`,
     },
   ];
 
@@ -497,7 +497,7 @@ const MaterialDetailsPage = () => {
                   </p>
                   {action.disabled ? (
                     <div className="w-full py-2 px-4 text-center bg-gray-200 opacity-50 rounded-md text-gray-700">
-                      Processing Required
+                      Currently Unavailable
                     </div>
                   ) : (
                     <div

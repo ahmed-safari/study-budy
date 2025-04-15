@@ -38,6 +38,7 @@ model Material {
   quizzes       Quiz[]
   flashcardDecks FlashcardDeck[]
   summaries     Summary[]
+  audioLectures AudioLecture[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
@@ -93,6 +94,20 @@ model Summary {
   id          String      @id @default(cuid())
   title       String
   content     String      @db.Text
+  materialId  String
+  material    Material    @relation(fields: [materialId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model AudioLecture {
+  id          String      @id @default(cuid())
+  title       String
+  audioUrl    String      // URL to the stored audio file
+  voice       String      @default("alloy") // Voice used for TTS: alloy, echo, fable, onyx, nova, shimmer
+  style       String?     // Speaking style (if supported)
+  duration    Int?        // Duration in seconds
+  status      String      @default("processing") // Status: processing, ready, error
   materialId  String
   material    Material    @relation(fields: [materialId], references: [id])
   createdAt   DateTime    @default(now())
